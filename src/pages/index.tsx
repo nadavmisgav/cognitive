@@ -12,9 +12,9 @@ type Post = {
   description: string;
 }
 
-const PostSummary: React.FC<{ post: Post }> = ({ post }) => {
+const PostSummary: React.FC<{ key: number, post: Post }> = ({ key, post }) => {
   return (
-    <div className="mx-6 my-0 py-5 px-0 flex flex-wrap justify-center basis-full relative sm:py-8 sm:px-0 sm:justify-start">
+    <div key={key} className="mx-6 my-0 py-5 px-0 flex flex-wrap justify-center basis-full relative sm:py-8 sm:px-0 sm:justify-start">
       <h1 className="grow w-full m-0 text-4xl tracking-wider font-bold hover:underline hover:cursor-pointer focus:underline focus:cursor-pointer">{post.name}</h1>
       <span className="grow w-full text-xs sm:text-base">{post.category} / {post.date}</span>
       <img className="post-summary-img" loading="lazy" src="https://dummyimage.com/640x360/fff/aaa" />
@@ -64,7 +64,7 @@ const Home: NextPage = () => {
       <Hero />
       {/* <section className="posts rellax" data-rellax-speed="10"> */}
       <section className="bg-gray-600 rounded-3xl xl:absolute xl:w-[70%] xl:left-[20%] xl:max-w-7xl">
-        {posts.map((post) => <PostSummary post={post} />)}
+        {posts.map((post, idx) => <PostSummary key={idx} post={post} />)}
       </section>
     </>
 
