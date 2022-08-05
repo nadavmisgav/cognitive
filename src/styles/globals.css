@@ -19,6 +19,9 @@ p {
 
 body {
     font-family: 'Heebo', sans-serif;
+    padding: 0;
+    margin: 0;
+    position: relative;
 }
 
 .post-summary-img {
