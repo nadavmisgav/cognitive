@@ -2,18 +2,21 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "sqlite"
-    url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model Post {
-  id    String @unique @default(uuid())
-  title String
-  body  String
+  id          String @unique @default(uuid())
+  title       String
+  category    String
+  body        String
+  image       String
+  description String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
