@@ -14,11 +14,11 @@ type Post = {
 
 const PostSummary: React.FC<{ post: Post }> = ({ post }) => {
   return (
-    <div className="mx-6 my-0 py-5 px-0 flex flex-wrap justify-center basis-full relative sm:py-8 sm:px-0 sm:content-end  xl:absolute xl:w-2/3 xl:left-10 xl:max-w-6xl">
-      <h1 className="grow w-full m-0 text-4xl tracking-wider font-bold hover:underline hover:cursor-pointer focus:underline focus:cursor-pointer sm:text-5xl">{post.name}</h1>
+    <div className="mx-6 my-0 py-5 px-0 flex flex-wrap justify-center basis-full relative sm:py-8 sm:px-0 sm:justify-start xl:absolute xl:w-2/3 xl:left-10 xl:max-w-6xl">
+      <h1 className="grow w-full m-0 text-4xl tracking-wider font-bold hover:underline hover:cursor-pointer focus:underline focus:cursor-pointer sm:text-4xl">{post.name}</h1>
       <span className="grow w-full text-xs sm:text-base">{post.category} / {post.date}</span>
-      <img style={{ minWidth: "calc(100% + 2*1.5rem)" }} className="max-h-72 object-cover my-4 mx-0 sm:min-w-0 sm:absolute sm:w-2/5 sm:-left-6 sm:rounded-r-2xl sm:top-1/4 sm:max-w-md xl:-left-16" loading="lazy" src="https://dummyimage.com/640x360/fff/aaa" />
-      <div className="flex grow flex-wrap sm:max-w-2xl">
+      <img className="post-summary-img" loading="lazy" src="https://dummyimage.com/640x360/fff/aaa" />
+      <div className="flex grow flex-wrap my-4 sm:max-w-[60%] ">
         <p className="grow w-full sm:text-base xl:text-xl xl:tracking-wide">
           {post.description}
         </p>

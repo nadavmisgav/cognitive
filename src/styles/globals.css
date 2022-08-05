@@ -20,3 +20,28 @@ p {
 body {
     font-family: 'Heebo', sans-serif;
 }
+
+.post-summary-img {
+    max-height: 300px;
+    min-width: calc(100% + 2*1.5rem);
+    object-fit: cover;
+    margin: 1rem 0;
+}
+
+@media screen and (min-width: 640px) {
+    .post-summary-img {
+        min-width: 0;
+        position: absolute;
+        width: 40%;
+        left: -1.5rem;
+        border-radius: 0 1rem 1rem 0;
+        top: 25%;
+        max-width: 420px;
+    }
+}
+
+@media screen and (min-width: 1280px) {
+    .post-summary-img {
+        left: -4rem;
+    }
+}
