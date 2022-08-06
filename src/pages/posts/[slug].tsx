@@ -36,7 +36,7 @@ const SinglePostPage: React.FC<{ source: MDXRemoteSerializeResult, frontMatter: 
                 <meta property="og:title" content={frontMatter.title} />
                 <meta property="og:type" content="article" />
                 <meta property="og:description" content={frontMatter.description} />
-                <meta property="og:url" content={frontMatter.image} />
+                <meta property="og:image" content={frontMatter.image} />
             </Head>
             <div>
                 <img className="w-full opacity-40 max-h-[30vh] xl:max-h-[40vh]" src={frontMatter.image} />
