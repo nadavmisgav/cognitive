@@ -6,15 +6,14 @@ import Link from 'next/link';
 import path from 'path';
 import React from "react";
 import Hero from "../components/Hero";
+import { Post } from '../types';
 import { postFilePaths, POSTS_PATH } from '../utils/mdxUtils';
-import { inferQueryOutput } from '../utils/trpc';
 
-type Post = inferQueryOutput<'posts.posts'>[0]
 
 
 const PostSummary: React.FC<{ post: Post }> = ({ post }) => {
   return (
-    <div key={post.id} className="mx-6 my-0 py-5 px-0 flex flex-wrap justify-center basis-full relative sm:py-8 sm:px-0 sm:justify-start">
+    <div key={post.data.title} className="mx-6 my-0 py-5 px-0 flex flex-wrap justify-center basis-full relative sm:py-8 sm:px-0 sm:justify-start">
       <Link
         as={`/posts/${post.filePath.replace(/\.mdx?$/, '')}`}
         href={`/posts/[slug]`}
@@ -32,7 +31,7 @@ const PostSummary: React.FC<{ post: Post }> = ({ post }) => {
   );
 }
 
-const Home: NextPage<{ posts: any }> = ({ posts }) => {
+const Home: NextPage<{ posts: Post[] }> = ({ posts }) => {
   return (
     <>
       <Head>

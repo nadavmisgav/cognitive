@@ -1,11 +1,12 @@
 import fs from 'fs'
 import matter from 'gray-matter'
-import { MDXRemote } from 'next-mdx-remote'
+import { MDXRemote, MDXRemoteSerializeResult } from 'next-mdx-remote'
 import { serialize } from 'next-mdx-remote/serialize'
 import path from 'path'
+import { PostMeta } from '../../types'
 import { postFilePaths, POSTS_PATH } from '../../utils/mdxUtils'
 
-function SinglePostPage({ source, frontMatter }) {
+const SinglePostPage: React.FC<{ source: MDXRemoteSerializeResult, frontMatter: PostMeta }> = ({ source, frontMatter }) => {
     return (
         <div>
             <img className="w-full opacity-40 max-h-[30vh] xl:max-h-[40vh]" src={frontMatter.image} />
