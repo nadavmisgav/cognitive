@@ -23,7 +23,7 @@ const components = {
     img: (props: any) => <img className="mx-auto" {...props} />,
     p: (props: any) => <p className="mb-4" {...props} />,
     blockquote: (props: any) => <blockquote className="my-4 italic bg-gray-800 p-4 rounded-xl text-gray-300" {...props} />,
-    code: (props: any) => <code style={{ borderRadius: "0.75rem", marginBottom: "1rem" }} className="italic py-[0.1rem] px-1" {...props} />,
+    code: (props: any) => <code style={{ direction: "ltr", borderRadius: "0.75rem", marginBottom: "1rem" }} className="italic py-[0.1rem] px-1 inline-block" {...props} />,
     li: (props: any) => <li className="list-disc mr-12" {...props} />,
 }
 const SinglePostPage: React.FC<{ source: MDXRemoteSerializeResult, frontMatter: PostMeta }> = ({ source, frontMatter }) => {
