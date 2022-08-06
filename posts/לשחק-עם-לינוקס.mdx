@@ -107,7 +107,57 @@ export LINUX=$OPT/linux
 export LINUX_BUILD=$BUILDS/linux
 mkdir -p $LINUX_BUILD
 ```
+מכיוון 
+שהkernel
+כתוב בצורה גנרית, המאפשרת לו לרוץ  בכל מיני קונפוגרציות שונות כמו כרטיסי זיכרון שונים, מעבדים שונים תצורות מחשב שונות.
+הבנייה שלו נעשית על פי קובץ קונפוגרציה הנקרא `.config`.
+לעיתים הפצות אורזות את הקובץ יחד עם המערכת קבצים ב`/boot/config-*`
+על מנת שיהיה ניתן לשחזר את הקימפול שלהם.
+
+אנחנו נרצה להתחיל מקונפיגורציה נקייה ולכן נריץ,
+```bash
+cd $LINUX
+make O=$LINUX_BUILD allnoconfig
+```
+אשר יאתחל קובץ שכמו שזה נשמע, כלום לא מאופשר בו.
+הדרך שבה נהוג לשנות את הקובץ קונפוגרציה היא לא על ידי עריכה ישירה אלא על ידי חלון קינפוג שאותו ניתן להריץ כך,
+
+```bash
+cd $LINUX_BUILD
+make menuconfig
+```
+לאחר ההרצה ייפתח לכם מסך בו תוכלו להגדיר את כל הקונפיגורציות שרלוונטיות לכם.
+אני עקבתי אחרי ה
+[gist](https://gist.github.com/chrisdone/02e165a0004be33734ac2334f215380e)
+ואיפשרתי את הקונפיגורציות הבאות
+
+```
+64-bit kernel ---> yes
+General setup ---> Initial RAM filesystem and RAM disk (initramfs/initrd) support ---> yes
+General setup ---> Configure standard kernel features ---> Enable support for printk ---> yes
+Executable file formats / Emulations ---> Kernel support for ELF binaries ---> yes
+Executable file formats / Emulations ---> Kernel support for scripts starting with #! ---> yes
+Device Drivers ---> Generic Driver Options ---> Maintain a devtmpfs filesystem to mount at /dev ---> yes
+Device Drivers ---> Generic Driver Options ---> Automount devtmpfs at /dev, after the kernel mounted the rootfs ---> yes
+Device Drivers ---> Character devices ---> Enable TTY ---> yes
+Device Drivers ---> Character devices ---> Serial drivers ---> 8250/16550 and compatible serial support ---> yes
+Device Drivers ---> Character devices ---> Serial drivers ---> Console on 8250/16550 and compatible serial port ---> yes
+File systems ---> Pseudo filesystems ---> /proc file system support ---> yes
+File systems ---> Pseudo filesystems ---> sysfs file system support ---> yes
+Enable loadable module support ---> yes 
+```
+לאחר הקינפוג ניתן לקמפל את הקרנל,
+```bash
+make -j8
+make modules_prepare
+```
+כאשר הפקודה הראשונה מקמפלת את הקרנל עצמו והפקודה השנייה מקמפלת קבצים שונים שנצטרך על מנת לקמפל
+ko
+שמתממשק לקרנל שלנו.
 
 
 
-
+### התקנות שהייתי צריך
+```
+sudo apt install build-essential flex lebelf-dev
+```
