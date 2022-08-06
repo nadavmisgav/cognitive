@@ -36,7 +36,13 @@ const Home: NextPage<{ posts: Post[] }> = ({ posts }) => {
     <>
       <Head>
         <title>קוגניטיבי</title>
+        <meta name="description" content="בלוג אישי, שנועד בעיקרו עבורי - לזכור פרויקטים, מחקרים וגם סתם מחשבות. מקווה שתהנו לקרוא." />
+        <meta property="og:title" content="קוגניטיבי" />
+        <meta property="og:type" content="article" />
+        <meta property="og:description" content="בלוג אישי, שנועד בעיקרו עבורי - לזכור פרויקטים, מחקרים וגם סתם מחשבות. מקווה שתהנו לקרוא." />
+        {/* <meta property="og:url" content="http://euro-travel-example.com/index.htm" /> */}
       </Head>
+
       <Hero />
       {posts?.length !== 0 ?
         <section className="bg-gray-600 rounded-3xl xl:absolute xl:w-[70%] xl:left-[20%] xl:max-w-7xl">

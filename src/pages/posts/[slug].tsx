@@ -3,6 +3,7 @@ import matter from 'gray-matter'
 import { GetStaticProps } from 'next'
 import { MDXRemote, MDXRemoteSerializeResult } from 'next-mdx-remote'
 import { serialize } from 'next-mdx-remote/serialize'
+import Head from 'next/head'
 import path from 'path'
 import rehypeHighlight from 'rehype-highlight'
 import emoji from 'remark-emoji'
@@ -26,15 +27,26 @@ const components = {
     li: (props: any) => <li className="list-disc mr-12" {...props} />,
 }
 const SinglePostPage: React.FC<{ source: MDXRemoteSerializeResult, frontMatter: PostMeta }> = ({ source, frontMatter }) => {
+
     return (
-        <div>
-            <img className="w-full opacity-40 max-h-[30vh] xl:max-h-[40vh]" src={frontMatter.image} />
-            <h1 className='text-center mt-12 text-5xl font-bold tracking-wider sm:text-6xl'>{frontMatter.title}</h1>
-            <h6 className='text-center text-sm text-gray-300 sm:text-base'>{frontMatter.category} / {frontMatter.createdAt}</h6>
-            <div className='mt-8 py-8 px-4 bg-gray-600 rounded-t-md sm:w-4/5 mx-auto max-w-6xl text-gray-200'>
-                <MDXRemote {...source} components={components} />
+        <>
+            <Head>
+                <title>{frontMatter.title}</title>
+                <meta name="description" content={frontMatter.description} />
+                <meta property="og:title" content={frontMatter.title} />
+                <meta property="og:type" content="article" />
+                <meta property="og:description" content={frontMatter.description} />
+                <meta property="og:url" content={frontMatter.image} />
+            </Head>
+            <div>
+                <img className="w-full opacity-40 max-h-[30vh] xl:max-h-[40vh]" src={frontMatter.image} />
+                <h1 className='text-center mt-12 text-5xl font-bold tracking-wider sm:text-6xl'>{frontMatter.title}</h1>
+                <h6 className='text-center text-sm text-gray-300 sm:text-base'>{frontMatter.category} / {frontMatter.createdAt}</h6>
+                <div className='mt-8 py-8 px-4 bg-gray-600 rounded-t-md sm:w-4/5 mx-auto max-w-6xl text-gray-200'>
+                    <MDXRemote {...source} components={components} />
+                </div>
             </div>
-        </div>
+        </>
     )
 }
 
