@@ -38,10 +38,14 @@ const Home: NextPage<{ posts: Post[] }> = ({ posts }) => {
         <title>קוגניטיבי</title>
       </Head>
       <Hero />
+      {posts?.length !== 0 ?
+        <section className="bg-gray-600 rounded-3xl xl:absolute xl:w-[70%] xl:left-[20%] xl:max-w-7xl">
+          {posts?.map(post => <PostSummary post={post} />)}
+        </section>
+        : <div className="flex justify-center items-center">
+          <h1 className="text-4xl">טרם פורסם פוסט ☹</h1>
+        </div>}
 
-      <section className="bg-gray-600 rounded-3xl xl:absolute xl:w-[70%] xl:left-[20%] xl:max-w-7xl">
-        {posts?.map(post => <PostSummary post={post} />)}
-      </section>
     </>
 
   );
