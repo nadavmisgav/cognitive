@@ -7,11 +7,15 @@
  * @param {T} config - A generic parameter that flows through to the return type
  * @constraint {{import('next').NextConfig}}
  */
-function defineNextConfig(config) {
-  return config;
-}
 
-export default defineNextConfig({
+import withPWA from "next-pwa";
+
+export default withPWA({
+  pwa: {
+    dest: 'public',
+    register: true,
+    skipWaiting: true,
+  },
   reactStrictMode: true,
   swcMinify: true,
   images: {
