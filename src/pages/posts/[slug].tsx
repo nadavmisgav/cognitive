@@ -25,6 +25,7 @@ const components = {
     blockquote: (props: any) => <blockquote className="my-4 italic bg-gray-800 p-4 rounded-xl text-gray-300" {...props} />,
     code: (props: any) => <code style={{ direction: "ltr", borderRadius: "0.75rem" }} className="italic py-[0.1rem] px-1 inline-block" {...props} />,
     li: (props: any) => <li className="list-disc mr-12" {...props} />,
+    a: (props: any) => <a className='hover:underline italic' {...props} />,
 }
 const SinglePostPage: React.FC<{ source: MDXRemoteSerializeResult, frontMatter: PostMeta }> = ({ source, frontMatter }) => {
 
