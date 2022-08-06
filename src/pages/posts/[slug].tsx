@@ -4,8 +4,11 @@ import { MDXRemote, MDXRemoteSerializeResult } from 'next-mdx-remote'
 import { serialize } from 'next-mdx-remote/serialize'
 import path from 'path'
 import rehypeHighlight from 'rehype-highlight'
+import emoji from 'remark-emoji'
+import remarkGfm from 'remark-gfm'
 import { PostMeta } from '../../types'
 import { postFilePaths, POSTS_PATH } from '../../utils/mdxUtils'
+
 
 const components = {
     pre: (props: any) => <pre style={{ direction: "ltr" }} {...props} />,
@@ -18,6 +21,8 @@ const components = {
     img: (props: any) => <img className="mx-auto" {...props} />,
     p: (props: any) => <p className="mb-4" {...props} />,
     blockquote: (props: any) => <blockquote className="my-4 italic bg-gray-800 p-4 rounded-xl text-gray-300" {...props} />,
+    code: (props: any) => <code style={{ borderRadius: "0.75rem" }} className="italic py-[0.1rem] px-1" {...props} />,
+    li: (props: any) => <li className="list-disc mr-12" {...props} />,
 }
 const SinglePostPage: React.FC<{ source: MDXRemoteSerializeResult, frontMatter: PostMeta }> = ({ source, frontMatter }) => {
     return (
@@ -43,7 +48,7 @@ export const getStaticProps = async ({ params }) => {
     const mdxSource = await serialize(content, {
         // Optionally pass remark/rehype plugins
         mdxOptions: {
-            remarkPlugins: [],
+            remarkPlugins: [emoji, remarkGfm],
             rehypePlugins: [rehypeHighlight],
         },
         scope: data,
