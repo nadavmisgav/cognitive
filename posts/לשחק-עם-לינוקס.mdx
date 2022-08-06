@@ -73,4 +73,41 @@ kernel
 בכלל מתחילה ריצה.
 
 ## יצירת גרסת Linux משלי
+אחרי לא מעט חיפושים באינרנט מצאתי
+[gist](https://gist.github.com/chrisdone/02e165a0004be33734ac2334f215380e)
+ממש טוב שמסביר את כל השלבים על מנת לעשות זאת.
+נתחיל מלהסביר את החלקים השונים שנצטרך על מנת ליצור הפצת
+linux
+משל עצמנו.
+
+1. kernel - צריך לקמפל גרסת kernel.
+2. מערכת קבצים - נרצה ליצור מערכת קבצים אשר תכיל בינארים בסיסיים לעבודה עם linux.
+3. init - סקריפט עליה שהkernel קופץ אליו לאחר שמעביר את המערכת למצב userspace.
+
+### קימפול kernel
+תחילה נוריד את הsource של הkernel 
+[מהrepo](https://github.com/torvalds/linux/tree/v5.19)
+של trovalds, נוריד את זה לתוך תקיית `/opt` שלנו.
+```bash
+cd /opt
+sudo mkdir linux
+# To prevent permission errors
+sudo chown nadav linux 
+
+cd linux
+# May take some time
+git clone git@github.com:torvalds/linux.git . 
+```
+לאחר שהורדנו נגדיר כמה משתני סביבה בשביל נוחות
+```bash
+export OPT=/opt
+export BUILDS=/home/nadav/projects/hook_infra/mini_linux
+mkdir -p $BUILDS
+export LINUX=$OPT/linux
+export LINUX_BUILD=$BUILDS/linux
+mkdir -p $LINUX_BUILD
+```
+
+
+
 
