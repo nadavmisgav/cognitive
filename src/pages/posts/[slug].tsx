@@ -1,5 +1,6 @@
 import fs from 'fs'
 import matter from 'gray-matter'
+import { GetStaticProps } from 'next'
 import { MDXRemote, MDXRemoteSerializeResult } from 'next-mdx-remote'
 import { serialize } from 'next-mdx-remote/serialize'
 import path from 'path'
@@ -8,6 +9,7 @@ import emoji from 'remark-emoji'
 import remarkGfm from 'remark-gfm'
 import { PostMeta } from '../../types'
 import { postFilePaths, POSTS_PATH } from '../../utils/mdxUtils'
+import Image from 'next/image'
 
 
 const components = {
@@ -18,7 +20,7 @@ const components = {
     h4: (props: any) => <h4 className='my-2 text-xl' {...props} />,
     h5: (props: any) => <h5 className='my-1 text-lg' {...props} />,
     h6: (props: any) => <h6 className='my-1 text-base' {...props} />,
-    img: (props: any) => <img className="mx-auto" {...props} />,
+    img: (props: any) => <Image className="mx-auto" {...props} />,
     p: (props: any) => <p className="mb-4" {...props} />,
     blockquote: (props: any) => <blockquote className="my-4 italic bg-gray-800 p-4 rounded-xl text-gray-300" {...props} />,
     code: (props: any) => <code style={{ borderRadius: "0.75rem" }} className="italic py-[0.1rem] px-1" {...props} />,
@@ -27,7 +29,7 @@ const components = {
 const SinglePostPage: React.FC<{ source: MDXRemoteSerializeResult, frontMatter: PostMeta }> = ({ source, frontMatter }) => {
     return (
         <div>
-            <img className="w-full opacity-40 max-h-[30vh] xl:max-h-[40vh]" src={frontMatter.image} />
+            <Image className="w-full opacity-40 max-h-[30vh] xl:max-h-[40vh]" src={frontMatter.image} />
             <h1 className='text-center mt-12 text-5xl font-bold tracking-wider sm:text-6xl'>{frontMatter.title}</h1>
             <h6 className='text-center text-sm text-gray-300 sm:text-base'>{frontMatter.category} / {frontMatter.createdAt}</h6>
             <div className='mt-8 py-8 px-12 bg-gray-600 rounded-t-md sm:w-4/5 mx-auto max-w-6xl text-gray-200'>
@@ -39,8 +41,8 @@ const SinglePostPage: React.FC<{ source: MDXRemoteSerializeResult, frontMatter: 
 
 export default SinglePostPage
 
-export const getStaticProps = async ({ params }) => {
-    const postFilePath = path.join(POSTS_PATH, `${params.slug}.mdx`)
+export const getStaticProps: GetStaticProps = async ({ params }) => {
+    const postFilePath = path.join(POSTS_PATH, `${params?.slug}.mdx`)
     const source = fs.readFileSync(postFilePath)
 
     const { content, data } = matter(source)
