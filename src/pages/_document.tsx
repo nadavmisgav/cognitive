@@ -14,6 +14,9 @@ export default function Document() {
                     href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;900&display=swap"
                     rel="stylesheet"
                 />
+                <meta name="theme-color" content="#1E293B" />
+                <link rel='apple-touch-icon' sizes='180x180' href='/apple-touch-icon.png' />
+                <link rel='shortcut icon' href='/favicon.ico' />
                 <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.3.2/build/styles/atom-one-dark.min.css"></link>
 
             </Head>
