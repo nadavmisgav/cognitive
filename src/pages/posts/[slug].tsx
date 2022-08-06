@@ -3,9 +3,22 @@ import matter from 'gray-matter'
 import { MDXRemote, MDXRemoteSerializeResult } from 'next-mdx-remote'
 import { serialize } from 'next-mdx-remote/serialize'
 import path from 'path'
+import rehypeHighlight from 'rehype-highlight'
 import { PostMeta } from '../../types'
 import { postFilePaths, POSTS_PATH } from '../../utils/mdxUtils'
 
+const components = {
+    pre: (props: any) => <pre style={{ direction: "ltr" }} {...props} />,
+    h1: (props: any) => <h1 className='my-4 text-4xl' {...props} />,
+    h2: (props: any) => <h2 className='my-4 text-3xl' {...props} />,
+    h3: (props: any) => <h3 className='my-2 text-2xl' {...props} />,
+    h4: (props: any) => <h4 className='my-2 text-xl' {...props} />,
+    h5: (props: any) => <h5 className='my-1 text-lg' {...props} />,
+    h6: (props: any) => <h6 className='my-1 text-base' {...props} />,
+    img: (props: any) => <img className="mx-auto" {...props} />,
+    p: (props: any) => <p className="mb-4" {...props} />,
+    blockquote: (props: any) => <blockquote className="my-4 italic bg-gray-800 p-4 rounded-xl text-gray-300" {...props} />,
+}
 const SinglePostPage: React.FC<{ source: MDXRemoteSerializeResult, frontMatter: PostMeta }> = ({ source, frontMatter }) => {
     return (
         <div>
@@ -13,7 +26,7 @@ const SinglePostPage: React.FC<{ source: MDXRemoteSerializeResult, frontMatter: 
             <h1 className='text-center mt-12 text-5xl font-bold tracking-wider sm:text-6xl'>{frontMatter.title}</h1>
             <h6 className='text-center text-sm text-gray-300 sm:text-base'>{frontMatter.category} / {frontMatter.createdAt}</h6>
             <div className='mt-8 py-8 px-12 bg-gray-600 rounded-t-md sm:w-4/5 mx-auto max-w-6xl text-gray-200'>
-                <MDXRemote {...source} />
+                <MDXRemote {...source} components={components} />
             </div>
         </div>
     )
@@ -31,7 +44,7 @@ export const getStaticProps = async ({ params }) => {
         // Optionally pass remark/rehype plugins
         mdxOptions: {
             remarkPlugins: [],
-            rehypePlugins: [],
+            rehypePlugins: [rehypeHighlight],
         },
         scope: data,
     })
