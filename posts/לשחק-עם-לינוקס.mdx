@@ -101,7 +101,7 @@ git clone git@github.com:torvalds/linux.git .
 לאחר שהורדנו נגדיר כמה משתני סביבה בשביל נוחות
 ```bash
 export OPT=/opt
-export BUILDS=/home/nadav/projects/hook_infra/mini_linux
+export BUILDS=/home/nadav/projects/hook_infra/builds
 mkdir -p $BUILDS
 export LINUX=$OPT/linux
 export LINUX_BUILD=$BUILDS/linux
@@ -152,10 +152,47 @@ make modules_prepare
 ```
 כאשר הפקודה הראשונה מקמפלת את הקרנל עצמו והפקודה השנייה מקמפלת קבצים שונים שנצטרך על מנת לקמפל
 ko
-שמתממשק לקרנל שלנו.
+שמתממשק לקרנל שלנו. לאחר סיום הקימפול תופיעה הודעה
+`Kernel: arch/x86/boot/bzImage is ready`
+ויש לנו kernel!
 
-### Busybox
+### בניית מערכת קבצים
+#### busybox
+במערכת הקבצים נרצה בינאריים שונים כגון
+`ls`
+ו`cat`
+אשר יאפשרו לנו לשחק עם הלינוקס שלנו. 
+[busybox](https://busybox.net/about.html)
+מכיל בתוכו בינאריים שונים שנפוצים בתפוצות של
+UNIX
+כאשר הוא מנסה להיות קטן.
 
+נוריד את הקוד
+(מהאתר)[https://busybox.net/downloads/]
+ונגדיר את המשתנים הבאים לנוחות
+```bash
+export BUSYBOX=$OPT/busybox
+export BUSYBOX_BUILD=$BUILDS/busybox
+mkdir -p $BUSYBOX_BUILD
+```
+כעת ניתן לקמפל כאשר גם כאן בדומה לקרנל יש דיי הרבה קונפוגרציות אפשרויות לכן תחילה נקמפל עם הגדרות ברירת המחדל,
+לאחר מכן נשתמש
+ב`menuconfig`
+על מנת לקנפג את הקימפול.
+
+```bash
+cd $BUSYBOX
+make O=$BUSYBOX_BUILD defconfig
+
+cd $BUSYBOX_BUILD
+make menuconfig
+```
+ההגדרה היחידה שחשובה הינה
+```
+Busybox Settings ---> Build Options ---> Build BusyBox as a static binary (no shared libs) ---> yes
+```
+ונקמפל עם
+`make`.
 
 ### התקנות שהייתי צריך
 ```
