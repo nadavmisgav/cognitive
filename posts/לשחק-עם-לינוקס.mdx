@@ -1,0 +1,285 @@
+---
+title: לשחק עם לינוקס
+category: לינוקס
+createdAt: 05.08.2022
+description: במהלך פיתוח של ko, נתקלתי בצורך למצוא פתרון קל לפיתוח ודיבוג של בעיות. qemu הינה תשתית אמולציה של מערכת, השתמשתי בה ויצרתי הפצת kernel מצומצמת משלי הכוללת את הגרסת linux kernel הכי חדשה וbusybox שמאפשר פקודות בסיסיות.
+image: https://images.unsplash.com/photo-1640552435388-a54879e72b28?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80
+
+---
+
+## הקדמה
+
+באחד מהימים רציתי לכתוב תשתית הוקים משלי,
+לגבי מה זה אומר תשתית הוקים נשמור לפוסט אחר
+(אם אי פעם באמת אכתוב אחת).
+התשתית בתכנון תומכת גם בהוקים קרנלים וגם ב
+userspace.
+אך כאשר התחלתי לכתוב את התשתית נתקלתי בכמה בעיות, ראשית אני עובד על מחשב
+Windows.
+כאשר
+WSL2
+בעיקרון יכול להריץ
+kernel module
+אך זה קצת מוזר לקמפל וגם זה יהיה עבור
+הkernel
+המוזר של
+Windows.
+האופציה שהייתה נראית לי טרוויאלית היא להקים מכונה וירטואלית של
+PopOS,
+אך מהר מאד ראיתי שגם פתרון זה מאד גרוע.
+הסיבה לכך היא שבמהלך הפיתוח של
+הko
+ביצעתי שגיאות/נסיונות, תקראו לזה איך שבא לכם, ובמקרה הטוב זה יצר לי
+kernel module
+שלא ניתן להסיר ובמקרה הגרוע פשוט עשה
+panic.
+בשני המקרים הייתי צריך לבצע
+reboot
+למכונה
+😢.
+
+
+תהליך הפיתוח המציק הזה הוביל אותי לחפש פתרון יותר טוב, כאשר הנחו אותי שתי דברים
+1. התשתית צריכה לתמוך בכל ארכיטקטורה מכיוון שרציתי אפשרות לבצע cross-compile בהמשך הדרך.
+2. התהליך של יצירת kernel עם הko שלי צריך להיות מהיר.
+
+## qemu
+[qemu](https://www.qemu.org/)
+היא תשתית דיי מגניבה לאמולציה של מכונה ומה שסופר מגניב בה זה שהיא יודעת לבצע אימולציה לארכיטקטורות שונות.
+כלומר אני יכול לרוץ על מחשב
+x86
+אבל לסמלץ
+mips, שזה עונה על הצורך הראשון שלי.
+בנוסף בגלל שזה אמולציה זה נטען ממש מהר ולא איכפת לי להקריס את זה וליצור חדש.
+בונוס נוסף
+לqemu
+מכיוון שזה פשוט
+process
+רגיל זה אומר שניתן לדבג את הקרנל עם
+gdb! (אבל זה למקרה שממש אסתבך)
+
+### התקנה ושימוש
+ההתקנה של
+qemu
+היא דיי פשוטה
+```bash
+sudo apt install qemu-system-x86
+```
+כאשר ניתן לבחור כל ארכיטקטורה שרוצים, אך נתחיל בפשטות
+(פשטות == אותה ארכיטקטורה כמו המחשב שלכם, זה יהיה ברור למה בהמשך).
+qemu
+מצפה לכל מיני פרמטרים כדי לדעת מה להריץ וזה מוביל אותנו רגע להבנה של כיצד
+kernel
+ומערכת הפעלה linuxית
+בכלל מתחילה ריצה.
+
+## יצירת גרסת Linux משלי
+אחרי לא מעט חיפושים באינרנט מצאתי
+[gist](https://gist.github.com/chrisdone/02e165a0004be33734ac2334f215380e)
+ממש טוב שמסביר את כל השלבים על מנת לעשות זאת.
+נתחיל מלהסביר את החלקים השונים שנצטרך על מנת ליצור הפצת
+linux
+משל עצמנו.
+
+1. kernel - צריך לקמפל גרסת kernel.
+2. מערכת קבצים - נרצה ליצור מערכת קבצים אשר תכיל בינארים בסיסיים לעבודה עם linux.
+3. init - סקריפט עליה שהkernel קופץ אליו לאחר שמעביר את המערכת למצב userspace.
+
+### קימפול kernel
+תחילה נוריד את הsource של הkernel 
+[מהrepo](https://github.com/torvalds/linux/tree/v5.19)
+של trovalds, נוריד את זה לתוך תקיית `/opt` שלנו.
+```bash
+cd /opt
+sudo mkdir linux
+# To prevent permission errors
+sudo chown nadav linux 
+
+cd linux
+# May take some time
+git clone git@github.com:torvalds/linux.git . 
+```
+לאחר שהורדנו נגדיר כמה משתני סביבה בשביל נוחות
+```bash
+export OPT=/opt
+export BUILDS=/home/nadav/projects/hook_infra/builds
+mkdir -p $BUILDS
+export LINUX=$OPT/linux
+export LINUX_BUILD=$BUILDS/linux
+mkdir -p $LINUX_BUILD
+```
+מכיוון 
+שהkernel
+כתוב בצורה גנרית, המאפשרת לו לרוץ  בכל מיני קונפוגרציות שונות כמו כרטיסי זיכרון שונים, מעבדים שונים תצורות מחשב שונות.
+הבנייה שלו נעשית על פי קובץ קונפוגרציה הנקרא `.config`.
+לעיתים הפצות אורזות את הקובץ יחד עם המערכת קבצים ב`/boot/config-*`
+על מנת שיהיה ניתן לשחזר את הקימפול שלהם.
+אנחנו נרצה להתחיל מקונפיגורציה נקייה ולכן נריץ,
+```bash
+cd $LINUX
+make O=$LINUX_BUILD allnoconfig
+```
+אשר יאתחל קובץ שכמו שזה נשמע, כלום לא מאופשר בו.
+הדרך שבה נהוג לשנות את הקובץ קונפוגרציה היא לא על ידי עריכה ישירה אלא על ידי חלון קינפוג שאותו ניתן להריץ כך,
+
+```bash
+cd $LINUX_BUILD
+make menuconfig
+```
+לאחר ההרצה ייפתח לכם מסך בו תוכלו להגדיר את כל הקונפיגורציות שרלוונטיות לכם.
+אני עקבתי אחרי ה
+[gist](https://gist.github.com/chrisdone/02e165a0004be33734ac2334f215380e)
+ואיפשרתי את הקונפיגורציות הבאות
+
+```
+64-bit kernel ---> yes
+General setup ---> Initial RAM filesystem and RAM disk (initramfs/initrd) support ---> yes
+General setup ---> Configure standard kernel features ---> Enable support for printk ---> yes
+Executable file formats / Emulations ---> Kernel support for ELF binaries ---> yes
+Executable file formats / Emulations ---> Kernel support for scripts starting with #! ---> yes
+Device Drivers ---> Generic Driver Options ---> Maintain a devtmpfs filesystem to mount at /dev ---> yes
+Device Drivers ---> Generic Driver Options ---> Automount devtmpfs at /dev, after the kernel mounted the rootfs ---> yes
+Device Drivers ---> Character devices ---> Enable TTY ---> yes
+Device Drivers ---> Character devices ---> Serial drivers ---> 8250/16550 and compatible serial support ---> yes
+Device Drivers ---> Character devices ---> Serial drivers ---> Console on 8250/16550 and compatible serial port ---> yes
+File systems ---> Pseudo filesystems ---> /proc file system support ---> yes
+File systems ---> Pseudo filesystems ---> sysfs file system support ---> yes
+Enable loadable module support ---> yes 
+```
+לאחר הקינפוג ניתן לקמפל את הקרנל עם הפקודות הבאות,
+```bash
+make -j8
+make modules_prepare
+```
+כאשר הפקודה הראשונה מקמפלת את הקרנל עצמו והפקודה השנייה מקמפלת קבצים שונים שנצטרך על מנת לקמפל
+ko
+שמתממשק לקרנל שלנו. לאחר סיום הקימפול תופיעה הודעה
+`Kernel: arch/x86/boot/bzImage is ready`
+ויש לנו kernel!
+הסיבה שבגללה טענתי ששימוש בx86
+זה פשוט יותר זה כי אחרת בקימפולים השונים שאנחנו עושים היינו צריכים לבצע
+cross-compile
+לארכיטקטורה שרלוונטית לנו.
+
+### בניית מערכת קבצים
+#### busybox
+במערכת הקבצים נרצה בינאריים שונים כגון
+`ls`
+ו`cat`
+אשר יאפשרו לנו לשחק עם הלינוקס שלנו. 
+[busybox](https://busybox.net/about.html)
+מכיל בתוכו בינאריים שונים שנפוצים בתפוצות של
+UNIX
+כאשר הוא מנסה להיות קטן.
+
+נוריד את הקוד
+[מהאתר](https://busybox.net/downloads/)
+ונגדיר את המשתנים הבאים לנוחות
+```bash
+export BUSYBOX=$OPT/busybox
+export BUSYBOX_BUILD=$BUILDS/busybox
+mkdir -p $BUSYBOX_BUILD
+```
+כעת ניתן לקמפל כאשר גם כאן בדומה לקרנל יש דיי הרבה קונפוגרציות אפשרויות לכן תחילה נקמפל עם הגדרות ברירת המחדל,
+לאחר מכן נשתמש
+ב`menuconfig`
+על מנת לקנפג את הקימפול.
+
+```bash
+cd $BUSYBOX
+make O=$BUSYBOX_BUILD defconfig
+
+cd $BUSYBOX_BUILD
+make menuconfig
+```
+ההגדרה היחידה שחשובה היא קימפול בצורה סטטית מכיוון שלא נשים ספריות במערכת הקבצים שלנו.
+```
+Busybox Settings ---> Build Options ---> Build BusyBox as a static binary (no shared libs) ---> yes
+```
+נקמפל עם
+`make`
+ולאחר מכן
+`make install`
+על מנת ליצור קישורים לכל הבינארים.
+
+### יצירת מערכת קבצים
+ניצור מערכת קבצים גנרית של לינוקס ונעתיק את כל הקבצי
+busybox
+שיצרנו אליה.
+```bash
+export INITRAMFS_BUILD=$BUILDS/initramfs
+mkdir -p $INITRAMFS_BUILD
+cd $INITRAMFS_BUILD
+mkdir -p bin sbin etc proc sys usr/bin usr/sbin
+cp -a $BUSYBOX_BUILD/_install/* .
+```
+בנוסף ניצור סקריפט
+`init`
+אשר אליו
+הkernel
+קופץ כאשר הוא עובר
+לuserspace.
+ניצור את הקובץ הבא
+ב
+`$INITRAMFS_BUILD/init`.
+
+```bash
+#!/bin/sh
+
+mount -t proc none /proc
+mount -t sysfs none /sys
+
+cat <<!
+
+
+Boot took $(cut -d' ' -f1 /proc/uptime) seconds
+
+        _       _     __ _                  
+  /\/\ (_)_ __ (_)   / /(_)_ __  _   ___  __
+ /    \| | '_ \| |  / / | | '_ \| | | \ \/ /
+/ /\/\ \ | | | | | / /__| | | | | |_| |>  < 
+\/    \/_|_| |_|_| \____/_|_| |_|\__,_/_/\_\ 
+
+
+Welcome to mini_linux
+
+
+!
+exec /bin/sh
+```
+
+דבר אחרון הוא לארוז את כל היררכיית הקבצים לקובץ ארוז במבנה הסטנדרטי של
+שהkernel משתמש בו,
+cpio.
+
+```bash
+chmod +x init
+find . -print0 | cpio --null -ov --format=newc \
+  | gzip -9 > $BUILDS/initramfs.cpio.gz
+```
+
+זהו כעת יש לנו מערכת קבצים!
+
+## הרצת qemu
+זהו יש לנו את כל הקבצים שאנחנו צריכים וניתן להריץ את ההפצת
+linux
+שיצרנו על ידי
+
+```bash
+qemu-system-x86_64 -kernel $LINUX_BUILD/arch/x86_64/boot/bzImage \
+  -initrd $BUILDS/initramfs.cpio.gz -nographic \
+  -append "console=ttyS0"
+```
+
+כאשר
+`<CTRL>a + x`
+יוציא אותנו מהסימולוציה.
+
+
+##### התקנות נוספות שהייתי צריך
+במהלך הקימפולים צריך כל מיני בינארים וספריות, זה מה שאני הייתי צריך.
+תלוי במערכת שלכם אולי תצטרכו להתקין עוד אבל דיי קל להבין מה השגיאה ומה צריך להתקין.
+
+```
+sudo apt install build-essential flex lebelf-dev
+```

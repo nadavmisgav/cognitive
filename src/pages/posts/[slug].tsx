@@ -13,7 +13,7 @@ import { postFilePaths, POSTS_PATH } from '../../utils/mdxUtils'
 
 
 const components = {
-    pre: (props: any) => <pre style={{ direction: "ltr" }} {...props} />,
+    pre: (props: any) => <pre className="mb-4" style={{ direction: "ltr" }} {...props} />,
     h1: (props: any) => <h1 className='my-4 text-4xl' {...props} />,
     h2: (props: any) => <h2 className='my-4 text-3xl' {...props} />,
     h3: (props: any) => <h3 className='my-2 text-2xl' {...props} />,
@@ -23,8 +23,9 @@ const components = {
     img: (props: any) => <img className="mx-auto" {...props} />,
     p: (props: any) => <p className="mb-4" {...props} />,
     blockquote: (props: any) => <blockquote className="my-4 italic bg-gray-800 p-4 rounded-xl text-gray-300" {...props} />,
-    code: (props: any) => <code style={{ borderRadius: "0.75rem" }} className="italic py-[0.1rem] px-1" {...props} />,
+    code: (props: any) => <code style={{ direction: "ltr", borderRadius: "0.75rem" }} className="italic py-[0.1rem] px-1 inline-block" {...props} />,
     li: (props: any) => <li className="list-disc mr-12" {...props} />,
+    a: (props: any) => <a className='hover:underline italic' {...props} />,
 }
 const SinglePostPage: React.FC<{ source: MDXRemoteSerializeResult, frontMatter: PostMeta }> = ({ source, frontMatter }) => {
 
