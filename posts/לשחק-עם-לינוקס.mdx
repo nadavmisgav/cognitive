@@ -187,12 +187,16 @@ make O=$BUSYBOX_BUILD defconfig
 cd $BUSYBOX_BUILD
 make menuconfig
 ```
-ההגדרה היחידה שחשובה הינה
+ההגדרה היחידה שחשובה היא קימפול בצורה סטטית מכיוון שלא נשים ספריות במערכת הקבצים שלנו.
 ```
 Busybox Settings ---> Build Options ---> Build BusyBox as a static binary (no shared libs) ---> yes
 ```
-ונקמפל עם
-`make`.
+נקמפל עם
+`make`
+ולאחר מכן
+`make install`
+על מנת ליצור קישורים לכל הבינארים.
+
 
 ### התקנות שהייתי צריך
 ```
