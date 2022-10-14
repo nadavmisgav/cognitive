@@ -1,0 +1,118 @@
+diff --git a/Grammar/python.gram b/Grammar/python.gram
+index 439f08a2cd..7d8f44c409 100644
+--- a/Grammar/python.gram
++++ b/Grammar/python.gram
+@@ -422,14 +422,14 @@ try_stmt[stmt_ty]:
+ 
+ except_block[excepthandler_ty]:
+     | invalid_except_stmt_indent
+-    | 'except' e=expression t=['as' z=NAME { z }] ':' b=block {
+-        _PyAST_ExceptHandler(e, (t) ? ((expr_ty) t)->v.Name.id : NULL, b, EXTRA) }
+-    | 'except' ':' b=block { _PyAST_ExceptHandler(NULL, NULL, b, EXTRA) }
++    | 'except' e=expression t=['as' z=NAME { z }] c=['if' y=named_expression { y }]  ':' b=block {
++        _PyAST_ExceptHandler(e, (t) ? ((expr_ty) t)->v.Name.id : NULL, b, c, EXTRA) }
++    | 'except' ':' b=block { _PyAST_ExceptHandler(NULL, NULL, b, NULL, EXTRA) }
+     | invalid_except_stmt
+ except_star_block[excepthandler_ty]:
+     | invalid_except_star_stmt_indent
+     | 'except' '*' e=expression t=['as' z=NAME { z }] ':' b=block {
+-        _PyAST_ExceptHandler(e, (t) ? ((expr_ty) t)->v.Name.id : NULL, b, EXTRA) }
++        _PyAST_ExceptHandler(e, (t) ? ((expr_ty) t)->v.Name.id : NULL, b, NULL,  EXTRA) }
+     | invalid_except_stmt
+ finally_block[asdl_stmt_seq*]:
+     | invalid_finally_stmt
+diff --git a/Parser/Python.asdl b/Parser/Python.asdl
+index e9423a7c98..37882ad829 100644
+--- a/Parser/Python.asdl
++++ b/Parser/Python.asdl
+@@ -106,7 +106,7 @@ module Python
+ 
+     comprehension = (expr target, expr iter, expr* ifs, int is_async)
+ 
+-    excepthandler = ExceptHandler(expr? type, identifier? name, stmt* body)
++    excepthandler = ExceptHandler(expr? type, identifier? name, stmt* body, expr? ifs)
+                     attributes (int lineno, int col_offset, int? end_lineno, int? end_col_offset)
+ 
+     arguments = (arg* posonlyargs, arg* args, arg? vararg, arg* kwonlyargs,
+diff --git a/Python/ast.c b/Python/ast.c
+index 50fc8e01fb..61bcd57a82 100644
+--- a/Python/ast.c
++++ b/Python/ast.c
+@@ -837,6 +837,12 @@ validate_stmt(struct validator *state, stmt_ty stmt)
+                  !validate_expr(state, handler->v.ExceptHandler.type, Load)) ||
+                 !validate_body(state, handler->v.ExceptHandler.body, "ExceptHandler"))
+                 return 0;
++            
++            if (handler->v.ExceptHandler.ifs) {
++                if (!validate_expr(state,handler->v.ExceptHandler.ifs, Load)) {
++                    return 0;
++                }
++            }
+         }
+         ret = (!asdl_seq_LEN(stmt->v.Try.finalbody) ||
+                 validate_stmts(state, stmt->v.Try.finalbody)) &&
+diff --git a/Python/compile.c b/Python/compile.c
+index 2da36d0f63..06606fdfef 100644
+--- a/Python/compile.c
++++ b/Python/compile.c
+@@ -3458,9 +3458,26 @@ compiler_try_except(struct compiler *c, stmt_ty s)
+         if (handler->v.ExceptHandler.name) {
+             NEW_JUMP_TARGET_LABEL(c, cleanup_end);
+             NEW_JUMP_TARGET_LABEL(c, cleanup_body);
++            NEW_JUMP_TARGET_LABEL(c, start_body);
+ 
+             compiler_nameop(c, handler->v.ExceptHandler.name, Store);
+ 
++            if (handler->v.ExceptHandler.ifs)
++            {
++                if (!compiler_jump_if(c, handler->v.ExceptHandler.ifs, start_body, 1))
++                {
++                    return 0;
++                }
++
++                
++                compiler_nameop(c, handler->v.ExceptHandler.name, Load);
++                ADDOP_LOAD_CONST(c, Py_None);
++                compiler_nameop(c, handler->v.ExceptHandler.name, Store);
++                compiler_nameop(c, handler->v.ExceptHandler.name, Del);
++                ADDOP_JUMP(c, JUMP, except);
++            }
++
++            USE_LABEL(c, start_body);
+             /*
+               try:
+                   # body
+@@ -3507,6 +3524,14 @@ compiler_try_except(struct compiler *c, stmt_ty s)
+         else {
+             NEW_JUMP_TARGET_LABEL(c, cleanup_body);
+ 
++            if (handler->v.ExceptHandler.ifs)
++            {
++                if (!compiler_jump_if(c, handler->v.ExceptHandler.ifs, except, 0))
++                {
++                    return 0;
++                }
++            }
++
+             ADDOP(c, POP_TOP); /* exc_value */
+ 
+             USE_LABEL(c, cleanup_body);
+diff --git a/Python/symtable.c b/Python/symtable.c
+index 342f5a080d..c7f5e8cd1b 100644
+--- a/Python/symtable.c
++++ b/Python/symtable.c
+@@ -1904,9 +1904,14 @@ symtable_visit_excepthandler(struct symtable *st, excepthandler_ty eh)
+ {
+     if (eh->v.ExceptHandler.type)
+         VISIT(st, expr, eh->v.ExceptHandler.type);
++
+     if (eh->v.ExceptHandler.name)
+         if (!symtable_add_def(st, eh->v.ExceptHandler.name, DEF_LOCAL, LOCATION(eh)))
+             return 0;
++
++    if (eh->v.ExceptHandler.ifs)
++        VISIT(st, expr, eh->v.ExceptHandler.ifs);
++        
+     VISIT_SEQ(st, stmt, eh->v.ExceptHandler.body);
+     return 1;
+ }

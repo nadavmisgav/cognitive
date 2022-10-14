@@ -249,7 +249,7 @@ AST
 ל`except`
 ב`exception` עצמו!
 
-#### `except` ללא השמה
+#### except ללא השמה
 הקוד שהוספתי הוא,
 ```diff
 @@ -3507,6 +3524,14 @@ compiler_try_except(struct compiler *c, stmt_ty s)
@@ -319,7 +319,7 @@ Syntax
  }
 ```
 
-#### `except` עם השמה
+#### except עם השמה
 כעת ארצה לטפל בקטע קוד שגם מבצע השמה,
 ```python
 except Exception as e: ...
@@ -380,3 +380,28 @@ except Exception as e: ...
 שהשתמשנו מקודם,
 `except`
 שכזכור פשוט מתאר את הקריאה לטיפול הבא בשגיאה.
+
+וזהו 🥳🥳🥳 עכשיו הקטע קוד הבא עובד,
+```python
+>>> foo = 1
+>>> try:
+...     raise ValueError()
+... except ValueError as e if foo == 1:
+...     print("Foo is 1")
+Foo is 1
+>>> 
+>>> try:
+...     raise ValueError()
+... except ValueError as e if foo != 1:
+...     print("Foo is 1")
+Traceback (most recent call last):
+  File "<stdin>", line 2, in <module>
+ValueError
+>>> 
+```
+כדי לשחזר את זה אני מוסיף את השינויים שעשיתי
+[פה](./expanding_except.diff),
+עבדתי
+בcommit
+5ecf961640
+אז יש ללכת אליו קודם, ואז להוסיף את השינויים שלי ולקמפל.
