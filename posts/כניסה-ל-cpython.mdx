@@ -288,3 +288,34 @@ AST
 ב`if`
 יש קריסה.
 
+#### בדיקת Syntax
+למעשה יש עוד חלק קוד
+ב`Python/symtable.c`
+שאחראי גם לעבור על
+הAST
+וליצור טבלת סימבולים שלמה ששם גם מוחלט מה
+הscope
+של כל סימבול.
+ארצה להוסיף לו לעבור גם על החלק של
+ה`if`
+בתוך
+ה`AST`
+של הטיפול בשגיאה. כך הוא יגלה על שגיאות
+Syntax
+וגם על סימבולים שלא מוגדרים.
+
+```diff
+@@ -1904,9 +1904,14 @@ symtable_visit_excepthandler(struct symtable *st, excepthandler_ty eh)
+ {
+     if (eh->v.ExceptHandler.type)
+         VISIT(st, expr, eh->v.ExceptHandler.type);
+     if (eh->v.ExceptHandler.name)
+         if (!symtable_add_def(st, eh->v.ExceptHandler.name, DEF_LOCAL, LOCATION(eh)))
+             return 0;
++    if (eh->v.ExceptHandler.ifs)
++        VISIT(st, expr, eh->v.ExceptHandler.ifs);
+     VISIT_SEQ(st, stmt, eh->v.ExceptHandler.body);
+     return 1;
+ }
+```
+
