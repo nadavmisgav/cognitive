@@ -1,0 +1,421 @@
+---
+title: כניסה לCPython
+category: פייתון
+createdAt: 14.10.2022
+description: במהלך חופשה רציתי להתחיל ללמוד על CPtython, לאחר שהסתכלתי על כמה באגים אפשריים שאוכל לתקן החלטתי דווקא ללכת על לנסות להוסיף Syntax משלי לשפה. הוספת הSyntax כללה הכנסה של החוקיות החדשה לחוקי Syntax של פייתון ועריכת הCompiler של Python כדי להכניס את הלוגיקה שרציתי. בנוסף יצאתי עם גרסת Python משלי שתומכת בSyntax נוסף עבור בלוק של try-except.
+image: https://images.unsplash.com/photo-1649180556628-9ba704115795?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1162&q=80
+
+---
+
+## הקדמה
+
+כבר תקופה שרציתי ללמוד יותר על
+CPython,
+אך לא מצאתי סיבה או יותר נכוון פרויקט שיגרום לי ללמוד על זה.
+לאחרונה היה לי קצת חופש והחלטתי שוב לתת לזה הזדמנות כאשר התחלתי מלהסתכל על באגים שאולי אני אוכל לנסות לתקן, אפשר למצוא רשימה מלאה
+[פה](https://bugs.python.org/)
+והיו כמה שעניינו אותי.
+
+1. [91105](https://github.com/python/cpython/issues/91105) הוספה של הדפסה אם עברת את `sys.tracebacklimit`.
+2. [91026](https://github.com/python/cpython/issues/91026) שגיאה פרסור של `urlparse`.
+3. [91078](https://github.com/python/cpython/issues/91078) קריסה של הספריה `tarfile`.
+
+תחילה כולם היו נראים לי יחסית פשוטים אך הבנתי שאין לי הבנה מספיק טובה של הבעיות המתוארות. בנוסף רציתי להתרכז בללמוד
+CPython
+ולא היה נראה שפתירת הבעיות הללו יעזרו לי ללמוד את זה.
+
+
+נזכרתי בהצעה שהייתה לי פעם 
+לSyntax
+נוסף לפייתון. הרעיון 
+לSyntax
+הגיע כאשר נתקלתי בצורך לכתוב קטע קוד בערך כזה,
+
+```python
+try
+    ...
+except SomeException:
+    if ignore_exceptions:
+        pass
+    else:
+        raise
+```
+כלומר רציתי יכולת לבצע התנייה על הכניסה לבלוק של ה
+`except`,
+שבדוגמה למעלה ההתנייה תלויה במשתנה שנקרא
+`ignore_exceptions`
+ורק אם ערכו אמת אני רוצה לתפוס את השגיאה.
+אני דמיינתי את
+הSyntax
+החדש ככה,
+
+```python
+try
+    ...
+except SomeException if ignore_exceptions:
+    pass
+```
+
+בהתחלה המחשבה שלי הייתה שאם זה נראה כמו קוד סוטה כנראה הלוגיקה שלי פה לא נכונה ויש דרך יותר הגיונית לעשות את זה,
+אז הלכתי לחפש בספריות אחרות של פייתון האם יש להם קטע קוד דומה (על איך עושים את זה אולי אכתוב פעם אחרת).
+מצאתי לא מעט דוגמאות מאד דומות לשלי והחלטתי לכתוב
+לmailing list
+שנקרא
+python-ideas
+לראות אם יש הגיון בהצעה הזאת.
+ניתן לראות את השרשור
+[פה](https://mail.python.org/archives/list/python-ideas@python.org/thread/XHT2JH5PCS73YC2PIX27MJSZY6XVE53V/#YH7A4GDAJYPG7EIRBCO5U2ESZ2IVYGUE).
+
+
+אנשים נחמדים ענו לי ואחד הדגים לי שאפשר כבר בערך לעשות את מה שאני רוצה באופן הבא,
+```python
+try
+    ...
+except SomeException if ignore_exceptions else ():
+    pass
+```
+בהתחלה לא היה לי ברור כל כך מה אני רואה פה (כמו שאפשר לראות בשרשור המביך את התלהבות שלי),
+אבל אז הבנתי שלמעשה יש פה אופרטור
+ternary if.
+כלומר אם התנאי מתקיים אז השגיאה שאצפה לה תיהיה 
+`SomeException`
+אך אם התנאי לא מתקיים אז אצפה 
+לtuple
+ריק שזה שקול בפייתון ללא לתפוס כלום.
+אפשר להבין את הקוד יותר טוב בכתיבה הבאה,
+
+```python
+exception_to_except = SomeException if ignore_exceptions else ()
+try:
+    ...
+except exception_to_except:
+    pass
+```
+תכלס, סייבר. אבל זה כתיבה די דוחה כי קשה להבין מה קורה פה וגם אתה חייב את
+הelse
+המוזר הזה.  
+ הערה טובה שמישהו ציין בשרשור זה
+שבSyntax
+החדש יהיה אפשר לעשות תנאי שתלוי גם בשגיאה שנזרקה שזה כבר הופך את זה לא רק
+לSyntax 
+חדש אלא ממש לתוספת לוגיקה לשפה.
+
+אז כל ההקדמה הזאת זה כדי לתאר מה הוביל אותי לממש את התוספת הזאת. אומר מראש שאני לא מבין כל כך
+בcompilerים
+וכיצד כותבים שפות תכנות, היה פה הרבה ניסוי וטעייה.
+בכל זאת אנסה לכתוב חלק ממה שלמדתי בדרך.
+
+## CPython
+הפרויקט שאעבוד עליו הוא המימוש המוכר של פייתון,
+[CPython](https://github.com/python/cpython)
+שכתוב
+בC.
+
+כדי לקמפל את בינארי שניתן לעבוד איתו עקבתי אחרי
+[devguide](https://devguide.python.org/).
+כדי להוסיף את
+הSyntax
+שרציתי אז התחלתי לחפש איך כל מיני דברים כמו
+`if`, `try-except`, `while`
+ממומשים.
+כאשר צריך לזכור שפייתון היא שפה שהיא
+interpeted,
+כמעט לגמרי.
+כלומר הקוד שאני כותב "מקומפל" לשפה שנקראית
+Bytecode
+שאותה
+הInterpeter
+של פייתון מריץ.
+למה זה חשוב לזכור את זה, כי מה שאני מחפש זה לא איזור קוד שבו אוכל להכניס לוגיקה של תנאי ואם התנאי מתקיים לקרוא 
+ל`except`
+בצורה רגילה ואחרת לא.
+אלא אני מחפש כיצד אני יכול להוסיף גם את החוקיות של
+הSyntax
+החדש וגם כיצד לקמפל
+Bytecode
+של תנאי לכניסה
+ל`except`.
+
+### Grammer
+נתחיל מהקובץ
+`Grammar/python.gram`
+אשר מכיל את החוקיות של
+הSyntax של פייתון,
+[**P**arsing **E**xpression **G**rammar](https://en.wikipedia.org/wiki/Parsing_expression_grammar).
+הפורמט חוקיות הזאת של הדקדוק נכנסה
+ב[PEP 617](https://peps.python.org/pep-0617/)
+ולמעשה יש כלי אוטומטי שיודע לעבור על הקובץ חוקים ולייצר ממנו קוד שמפרסר את השפה.
+אבצע הוספה של
+ה`if`
+לחוקיות של
+`except`. אפרק את התוספת לכמה חלקים שיהיה לי קל להסביר,
+
+#### הוספת החוקיות
+
+```diff
+ except_block[excepthandler_ty]:
+     | invalid_except_stmt_indent
+-    | 'except' e=expression t=['as' z=NAME { z }] ':' b=block {
++    | 'except' e=expression t=['as' z=NAME { z }] c=['if' y=named_expression { y }]  ':' b=block {
+```
+בשינוי זה אני מאפשר אופצינלית
+(בגלל זה סוגריים מרובעים)
+להוסיף
+`if`
+אחרי
+ה`except`,
+ניתן לראות שזה למעשה מאד דומה לאפשרות להוסיף
+`as`
+אחרי
+ה`except`.
+לתנאי אני קורא `c`.
+התוספת הבאה שצריך זה להחליט מה אני עושה עם התנאי הזה,
+
+```diff
+ except_block[excepthandler_ty]:
+     | invalid_except_stmt_indent
+     | 'except' e=expression t=['as' z=NAME { z }] c=['if' y=named_expression { y }]  ':' b=block {
+-        _PyAST_ExceptHandler(e, (t) ? ((expr_ty) t)->v.Name.id : NULL, b, EXTRA) }
++        _PyAST_ExceptHandler(e, (t) ? ((expr_ty) t)->v.Name.id : NULL, b, c, EXTRA) }
+```
+הכתיבה הזאת למעשה מתארת כיצד לפרסר את החוקיות ולהכניס כל חלק בה כארגומנט לפונקציה שתתרגם אותה
+לAST. 
+התוספת כאן היא עוד ארגומנט לפונקציה אשר מכיל את התנאי.
+(לכל קריאה לפונקציה `_PyAST_ExceptHandler` בקובץ חוקיות שבה אין את התוספת Syntax שלי צריך להוסיף ארגומנט שהוא NULL. לא מראה את זה פה אבל ניתן לראות איך זה נראה בתוצאה הסופית של כל השינויים.)
+
+לאחר תוספת זאת ניתן להריץ
+```bash
+make regen-pegen
+```
+ולראות שהיו שינויים בקובץ `Parser/parser.c` שאחראי על הפרסור של הקוד פייתון.
+
+
+### AST
+המבנה
+שהcompiler
+מקבל הוא
+AST 
+ואצרטך להוסיף לקובץ
+`Parser/Python.asdl`
+שמגדיר את העץ, התיאור של מה זה הפרטמר שהוספתי לפונקציה 
+`_PyAST_ExceptHandler`
+כי גם היא נבנית בצורה אוטומטית.
+
+```diff
+-    excepthandler = ExceptHandler(expr? type, identifier? name, stmt* body)
++    excepthandler = ExceptHandler(expr? type, identifier? name, stmt* body, expr? ifs)
+                     attributes (int lineno, int col_offset, int? end_lineno, int? end_col_offset)
+```
+ההוספה מתארת הוספה של משתנה שנקרא
+`ifs`
+שהוא מתואר, לפי הסימן שאלה, כאופציונלי והוא מסוג של
+`expr`
+שזה תיאור של ביטוי
+pythonי. 
+,לאחר תוספת זאת ניתן להריץ
+```bash
+make regen-ast
+```
+ולראות שהיו שינויים בשתי קבצים
+1. `Python/Python-ast.c` - קובץ זה יגדיר את הAST וגם לדוגמה את ההוספת פרמטר שעשיתי לפונקצייה `_PyAST_ExceptHandler` בה הGrammer משתמש.
+2. `Include/internal/pycore_ast.h` - קובץ header עם החתימה החדשה של הפונקצייה `_PyAST_ExceptHandler` וגם מבנה הנותנים שמחזיק את כל המידע של שגיאה, `struct _excepthandler` כולל הביטוי `if` החדש.
+
+מגניב 🎉 עכשיו ניתן לקמפל את הגרסת פייתון הזאת ויש 
+Syntax
+חדש, אבל כרגע הוא לא עושה כלום - רק לא זורק
+`SyntaxError`.
+
+### קומפילציה
+כפי שכבר ציינתי,
+מה
+שPython
+עושה זה לקמפל את הקוד
+לBytecode
+אותו הוא מריץ.
+כעת ארצה להתערב בשלב הקומפילציה כדי לעדכן
+שהSyntax
+החדש לא רק יבנה
+AST
+אלא גם ישפיע על
+הBytecode
+שנוצר.
+הקובץ שאחראי על קימפול הוא
+`Python/compile.c`
+ובו ניתן לראות שבעצם יש שני מקרים של טיפול
+ב`try-except`
+(האמת שיש יותר אבל שתיים שמעניינים אותי).
+
+1. טיפול ב`except` רגיל.
+2. טיפול ב`except` שבו קיימת השמה למשתנה. כלומר `except Exception as my_val`.
+
+הסיבה לטיפול השונה היא בגלל איך שמשתנים עובדים בפייתון, וניכנס לזה בהמשך אבל נתחיל מהמקרה הקל ללא השמה.
+תזכרו שהמקרה עם ההשמה מעניין אותנו כי לאחר ההשמה יהיה ניתן להתנות את הכניסה
+ל`except`
+ב`exception` עצמו!
+
+#### except ללא השמה
+הקוד שהוספתי הוא,
+```diff
+@@ -3507,6 +3524,14 @@ compiler_try_except(struct compiler *c, stmt_ty s)
+         else {
+             NEW_JUMP_TARGET_LABEL(c, cleanup_body);
++            if (handler->v.ExceptHandler.ifs) {
++                if (!compiler_jump_if(c, handler->v.ExceptHandler.ifs, except, 0)) {
++                    return 0;
++                }
++            }
+             ADDOP(c, POP_TOP); /* exc_value */
+             USE_LABEL(c, cleanup_body);
+             if (!compiler_push_fblock(c, HANDLER_CLEANUP, cleanup_body, NO_LABEL, NULL))
+               return 0;
+             VISIT_SEQ(c, stmt, handler->v.ExceptHandler.body);
+             compiler_pop_fblock(c, HANDLER_CLEANUP, cleanup_body);
+```
+כלומר לפני הכניסה לבלוק של
+ה`except`
+נבדוק האם קיים תנאי עבור הטיפול הנוכחי בשגיאה, בעיקרון יכולים להיות כמה בלוקים של 
+`except`
+ולא חייב להיות תנאי בכל אחד מהם.
+(אגב ה`struct` שאני משתמש בו למעשה נוצר דינאמית לפי הAST)
+אם קיים תנאי אז נבדוק אותו.
+במקרה והתנאי מתקיים ממשיכים כרגיל לשאר הקוד,
+אם התנאי לא מתקיים
+(זה ה0 בסוף הפונקציה)
+אז נקפוץ
+לlabel
+שנקרא
+`except`
+שמוגדר בהמשך, שפשוט אומר לקוד לעבור לטיפול הבא בשגיאה
+(שם מבלבל - לא שלי).
+
+בשלב הזה
+הSyntax
+החדש גם עובד, אבל שמתי לב לבעיה שאם יש לו שגיאת כתיב או קוד לא תקין
+ב`if`
+יש קריסה.
+
+#### בדיקת Syntax
+למעשה יש עוד חלק קוד
+ב`Python/symtable.c`
+שאחראי גם לעבור על
+הAST
+וליצור טבלת סימבולים שלמה ששם גם מוחלט מה
+הscope
+של כל סימבול.
+ארצה להוסיף לו לעבור גם על החלק של
+ה`if`
+שהוספתי
+בתוך
+ה`AST`
+של הטיפול בשגיאה. כך הוא יגלה על שגיאות
+Syntax
+וגם על סימבולים שלא מוגדרים.
+
+```diff
+@@ -1904,9 +1904,14 @@ symtable_visit_excepthandler(struct symtable *st, excepthandler_ty eh)
+ {
+     if (eh->v.ExceptHandler.type)
+         VISIT(st, expr, eh->v.ExceptHandler.type);
+     if (eh->v.ExceptHandler.name)
+         if (!symtable_add_def(st, eh->v.ExceptHandler.name, DEF_LOCAL, LOCATION(eh)))
+             return 0;
++    if (eh->v.ExceptHandler.ifs)
++        VISIT(st, expr, eh->v.ExceptHandler.ifs);
+     VISIT_SEQ(st, stmt, eh->v.ExceptHandler.body);
+     return 1;
+ }
+```
+
+#### except עם השמה
+ארצה לטפל בקטע קוד שגם מבצע השמה,
+```python
+except Exception as e: ...
+```
+זה גם לוגיקה שמטופלת בפונקציה
+`compiler_try_except`
+שערכתי אך זה קצת יותר מסובך.
+
+```diff
+         if (handler->v.ExceptHandler.name) {
+             NEW_JUMP_TARGET_LABEL(c, cleanup_end);
+             NEW_JUMP_TARGET_LABEL(c, cleanup_body);
++            NEW_JUMP_TARGET_LABEL(c, start_body);
+ 
+             compiler_nameop(c, handler->v.ExceptHandler.name, Store);
+ 
++            if (handler->v.ExceptHandler.ifs) {
++                if (!compiler_jump_if(c, handler->v.ExceptHandler.ifs, start_body, 1)) {
++                    return 0;
++                }
++                
++                compiler_nameop(c, handler->v.ExceptHandler.name, Load);
++                ADDOP_LOAD_CONST(c, Py_None);
++                compiler_nameop(c, handler->v.ExceptHandler.name, Store);
++                compiler_nameop(c, handler->v.ExceptHandler.name, Del);
++                ADDOP_JUMP(c, JUMP, except);
++            }
++            USE_LABEL(c, start_body);
+```
+
+ההבדל המשמעותי הוא שהתבצע פקודת
+`Store`
+למשתנה לפני התנאי שלי, וזה כדי שיהיה לי את המשתנה עבור התנאי.
+איך שזה עובד בפייתון זה שהמשתנים נמצאים
+בstack
+שהוא מגדיר ולכן פעולת השמה היא למעשה הוצאה 
+מהstack
+את הערך האחרון,
+שבמקרה הזה זה השגיאה
+והשמה שלו למשתנה ששמור
+ב`ExceptHandler.name`.
+אתחיל מלבצע בדיקה דומה של התנאי אך הפעם עם התנאי מתקיים אני קופץ
+לlabel
+שהגדרתי שנקרא
+`start_body`
+שהוא פשוט ההמשך הקיים של הלוגיקה.
+אם התנאי לא מתקיים אז אני טוען עם
+`Load`
+את המשתנה חזרה
+לstack
+ואז מוחק את המשתנה
+(המחיקה של המשתנה זה השמה של None ואז מחיקה, לא ברור לי למה אבל ככה הם עשו את זה בשאר הפונקציה).
+עכשיו שהשגיאה שוב נמצאת
+בstack
+אני יכול לבצע קריאה
+ל`JUMP`
+לאותו
+הlabel
+שציינתי מקודם,
+`except`
+שכזכור פשוט מתאר את הקריאה לטיפול הבא בשגיאה.
+
+וזהו 🥳🥳🥳 עכשיו הקטע קוד הבא עובד,
+```python
+>>> foo = 1
+>>> try:
+...     raise ValueError()
+... except ValueError as e if foo == 1:
+...     print("Foo is 1")
+Foo is 1
+>>> 
+>>> try:
+...     raise ValueError()
+... except ValueError as e if foo != 1:
+...     print("Foo is 1")
+Traceback (most recent call last):
+  File "<stdin>", line 2, in <module>
+ValueError
+>>> 
+```
+כדי לשחזר את מה שעשיתי, אני מוסיף את השינויים שעשיתי
+[פה](../expanding_except.diff).
+עבדתי
+בcommit
+2fe44f728a
+אז יש ללכת אליו קודם, ואז להוסיף את השינויים שלי ולקמפל.
+```bash
+./configure
+make regen-pegen
+make regen-ast
+make -j
+```
