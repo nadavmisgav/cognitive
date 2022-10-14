@@ -222,3 +222,69 @@ Syntax
 חדש, אבל כרגע הוא לא עושה כלום - רק לא זורק לכם
 `SyntaxError`.
 
+### קומפילציה
+כפי שכבר ציינתי
+משPython
+עושה זה לקמפל את הקוד
+לBytecode
+אותו הוא מריץ.
+כעת ארצה להתערב בשלב הקומפילציה כדי לעדכן
+שהSyntax
+החדש לא רק יבנה
+AST
+אלא גם ישפיע על
+הBytecode
+שנוצר.
+הקובץ שאחראי על קימפול הוא
+`Python/compile.c`
+ובו ניתן לראות שבעצם יש שני מקרים של טיפול
+ב`try-except`
+(האמת שיש יותר אבל שתיים שמעניינים אותי).
+
+1. לטיפול ב`except` רגיל.
+2. טיפול ב`except` שבו קיימת השמה למשתנה. כלומר `except Exception as my_val`.
+
+הסיבה לטיפול השונה היא בגלל איך שמשתנים עובדים בפייתון, וניכנס לזה בהמשך אבל נתחיל מהמקרה הקל ללא השמה.
+תזכרו שהמקרה עם ההשמה מעניין אותנו כי לאחר ההשמה יהיה ניתן להתנות את הכניסה
+ל`except`
+ב`exception` עצמו!
+
+#### ללא השמה
+הקוד שהוספתי הוא,
+```diff
+@@ -3507,6 +3524,14 @@ compiler_try_except(struct compiler *c, stmt_ty s)
+         else {
+             NEW_JUMP_TARGET_LABEL(c, cleanup_body);
++            if (handler->v.ExceptHandler.ifs) {
++                if (!compiler_jump_if(c, handler->v.ExceptHandler.ifs, except, 0)) {
++                    return 0;
++                }
++            }
+             ADDOP(c, POP_TOP); /* exc_value */
+             USE_LABEL(c, cleanup_body);
+             if (!compiler_push_fblock(c, HANDLER_CLEANUP, cleanup_body, NO_LABEL, NULL))
+               return 0;
+             VISIT_SEQ(c, stmt, handler->v.ExceptHandler.body);
+             compiler_pop_fblock(c, HANDLER_CLEANUP, cleanup_body);
+```
+כלומר לפני הכניסה לבלוק של
+ה`except`
+נבדוק האם קיים תנאי עבור הטיפול בנוכחי בשגיאה
+(ה`struct` שאני משתמש בו למעשה נוצר דינאמית לפי הAST)
+כי לא חייב להיות תנאי, ואם הוא קיים אז נבדוק אותו.
+במקרה והתנאי מתקיים ממשיכים כרגיל השאר הקוד,
+אם התנאי לא מתקיים
+(זה ה0 בסוף הפונקציה)
+אז נקפוץ
+לlabel
+שנקרא
+`except`
+שמוגדר בהמשך, שפשוט אומר לקוד לעבור לטיפול הבא בשגיאה
+(שם מבלבל - לא שלי).
+
+בשלב הזה
+הSyntax
+החדש גם עובד, אבל שמתי לב לבעיה שאם יש לו שגיאת כתיב או קוד לא תקין
+ב`if`
+יש קריסה.
+
