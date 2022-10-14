@@ -101,3 +101,90 @@ except exception_to_except:
 בcompilerים
 וכיצד כותבים שפות תכנות, היה פה הרבה ניסוי וטעייה.
 בכל זאת אנסה לכתוב חלק ממה שלמדתי בדרך.
+
+## CPython
+הפרויקט שאעבוד עליו הוא המימוש המוכר של פייתון,
+[CPython](https://github.com/python/cpython)
+שכתוב
+בC.
+
+כדי לקמפל את בינארי שניתן לעבוד איתו עקבתי אחרי
+[devguide](https://devguide.python.org/).
+כדי להוסיף את
+הSyntax
+שרציתי אז התחלתי לחפש איך כל מיני דברים כמו
+`if`, `try-except`, `while`
+ממומשים.
+כאשר צריך לזכור שפייתון היא שפה שהיא
+interpeted,
+כמעט לגמרי.
+כלומר הקוד שאני כותב "מקומפל" לשפה שנקראית
+Bytecode
+שאותה
+הInterpeter
+של פייתון מריץ.
+למה זה חשוב לזכור את זה, כי מה שאני מחפש זה לא איזור קוד שבוא אוכל להכניס לוגיקה של תנאי ואם התנאי מתקיים לקרוא 
+ל`except`
+בצורה רגילה ואחרת לא.
+אלא אני מחפש כיצד אני יכול להוסיף גם את החוקיות של
+הSyntax
+החדש וגם כיצד לקמפל
+Bytecode
+של תנאי לכניסה
+ל`except`.
+
+### Grammer
+נתחיל מהקובץ
+`Grammar/python.gram`
+אשר מכיל את החוקיות של
+הSyntax של פייתון,
+[**P**arsing **E**xpression **G**rammar](https://en.wikipedia.org/wiki/Parsing_expression_grammar).
+החוקיות של הדקדוק נכנסה
+ב[PEP 617](https://peps.python.org/pep-0617/)
+ולמעשה יש כלי אוטומטי שיודע לעבור על הקובץ חוקים ולייצר ממנו קוד שמפרסר את השפה.
+נבצע הוספה של
+ה`if`
+שלנו לחוקיות של
+`except`. אפרק את התוספת לכמה חלקים שיהיה לי קל להסביר,
+
+#### הוספת החוקיות
+
+```diff
+ except_block[excepthandler_ty]:
+     | invalid_except_stmt_indent
+-    | 'except' e=expression t=['as' z=NAME { z }] ':' b=block {
++    | 'except' e=expression t=['as' z=NAME { z }] c=['if' y=named_expression { y }]  ':' b=block {
+```
+בשינוי זה אני מאפשר אופצינלית
+(בגלל זה סוגריים מרובעים)
+להוסיף
+`if`
+אחרי
+ה`except`,
+ניתן לראות שזה למעשה מאד דומה לאפשרות להוסיף
+`as`
+אחרי
+ה`except`.
+לתנאי אני קורא `c`.
+התוספת הבאה שצריך זה להחליט מה עושים עם התנאי הזה,
+
+```diff
+ except_block[excepthandler_ty]:
+     | invalid_except_stmt_indent
+     | 'except' e=expression t=['as' z=NAME { z }] c=['if' y=named_expression { y }]  ':' b=block {
+-        _PyAST_ExceptHandler(e, (t) ? ((expr_ty) t)->v.Name.id : NULL, b, EXTRA) }
++        _PyAST_ExceptHandler(e, (t) ? ((expr_ty) t)->v.Name.id : NULL, b, c, EXTRA) }
+```
+הכתיבה הזאת למעשה מתארת כיצד לפרסר את החוקיות ולהכניס כל חלק בה כארגומנט לפונקציה שתתרגם אותה
+לAST. 
+התוספת כאן היא עוד ארגומנט לפונקציה אשר מכיל את התנאי.
+(לכל קריאה לפונקציה בחוקיות שבה אין את התוספת Syntax שלי צריך להוסיף ארגומנט שהוא NULL. לא מראה את זה פה אבל ניתן לראות איך זה נראה בתוצאה הסופית של כל השינויים.)
+
+לאחר התוספות הללו ניתן להריץ
+```bash
+make regen-pegen
+```
+ולראות שהיו שינויים בקובץ `Parser/parser.c` שאחראי על הפרסור של הקוד פייתון.
+
+
+
