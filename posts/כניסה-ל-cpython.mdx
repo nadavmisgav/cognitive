@@ -187,4 +187,38 @@ make regen-pegen
 ולראות שהיו שינויים בקובץ `Parser/parser.c` שאחראי על הפרסור של הקוד פייתון.
 
 
+### AST
+המבנה
+שהcompiler
+מקבל הוא
+AST 
+ונצטרך להוסיף לקובץ
+`Parser/Python.asdl`
+שמגדיר את העץ את התיאור של מה זה הפרטמר שהוספנו לפונקציה 
+`_PyAST_ExceptHandler`
+כי גם היא נבנית בצורה אוטומטית.
+
+```diff
+-    excepthandler = ExceptHandler(expr? type, identifier? name, stmt* body)
++    excepthandler = ExceptHandler(expr? type, identifier? name, stmt* body, expr? ifs)
+                     attributes (int lineno, int col_offset, int? end_lineno, int? end_col_offset)
+```
+ההוספה מתארת הוספה של משתנה שנקרא
+`ifs`
+שהוא מתואר לפי הסימן שאלה כאופציונלי והוא מסוג של
+`expr`
+שזה תיאור של ביטוי
+pythonי.
+כעת נריץ,
+```bash
+make regen-ast
+```
+ונראה שינויים בשתי קבצים
+1. `Python/Python-ast.c` - קובץ זה יגדיר את הAST וגם לדוגמה את ההוספת פרמטר שעשיתי לפונקצייה `_PyAST_ExceptHandler` בה הGrammer משתמש.
+2. `Include/internal/pycore_ast.h` - קובץ header עם החתימה החדשה של הפונקצייה `_PyAST_ExceptHandler` וגם מבנה הנותנים שמחזיק את כל המידע של שגיאה, `struct _excepthandler` כולל הביטוי `if` החדש.
+
+מגניב 🎉 עכשיו ניתן לקמפל את הפייתון הזה ויש לנו
+Syntax
+חדש, אבל כרגע הוא לא עושה כלום - רק לא זורק לכם
+`SyntaxError`.
 
