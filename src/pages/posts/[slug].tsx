@@ -24,8 +24,10 @@ const components = {
     p: (props: any) => <p className="mb-4" {...props} />,
     blockquote: (props: any) => <blockquote className="my-4 italic bg-gray-800 p-4 rounded-xl text-gray-300" {...props} />,
     code: (props: any) => <code style={{ backgroundColor: "rgb(31, 41, 55)", direction: "ltr", borderRadius: "0.75rem" }} className="italic py-[0.1rem] px-2 inline-block" {...props} />,
-    li: (props: any) => <li className="list-disc mr-12" {...props} />,
-    a: (props: any) => <a target="_blank" className='underline italic' {...props} />,
+    li: (props: any) => <li className="mr-12" {...props} />,
+    a: (props: any) => <a target="_blank" rel="noopener noreferrer" className='underline italic' {...props} />,
+    ol: (props: any) => <ol className="list-decimal" {...props} />,
+    ul: (props: any) => <ol className="list-disc" {...props} />,
 }
 const SinglePostPage: React.FC<{ source: MDXRemoteSerializeResult, frontMatter: PostMeta }> = ({ source, frontMatter }) => {
 
