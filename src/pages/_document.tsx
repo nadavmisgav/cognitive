@@ -21,7 +21,6 @@ export default function Document() {
 
             </Head>
             <body className='p-0 m-0 bg-gray-800 text-gray-200 relative'>
-                <Navbar />
                 <Main />
                 <NextScript />
             </body>
