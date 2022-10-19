@@ -5,10 +5,10 @@ import Head from "next/head";
 import Link from 'next/link';
 import path from 'path';
 import React from "react";
+import { useParallax } from 'react-scroll-parallax';
 import Hero from "../components/Hero";
 import { Post } from '../types';
 import { postFilePaths, POSTS_PATH } from '../utils/mdxUtils';
-
 
 
 const PostSummary: React.FC<{ post: Post }> = ({ post }) => {
@@ -32,6 +32,8 @@ const PostSummary: React.FC<{ post: Post }> = ({ post }) => {
 }
 
 const Home: NextPage<{ posts: Post[] }> = ({ posts }) => {
+  const { ref } = useParallax<HTMLDivElement>({ speed: 10 });
+
   return (
     <>
       <Head>
@@ -45,7 +47,7 @@ const Home: NextPage<{ posts: Post[] }> = ({ posts }) => {
 
       <Hero />
       {posts?.length !== 0 ?
-        <section className="bg-gray-600 rounded-3xl xl:absolute xl:w-[70%] xl:left-[20%] xl:max-w-7xl">
+        <section ref={ref} className="bg-gray-600 rounded-3xl xl:absolute xl:w-[70%] xl:left-[20%] xl:max-w-7xl">
           {posts?.map(post => <PostSummary key={post.data.title} post={post} />)}
         </section>
         : <div className="flex justify-center items-center">
