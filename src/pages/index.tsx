@@ -1,5 +1,6 @@
 import fs from 'fs';
 import matter from 'gray-matter';
+import moment from 'moment';
 import type { NextPage } from "next";
 import Head from "next/head";
 import Link from 'next/link';
@@ -8,6 +9,7 @@ import React from "react";
 import { useParallax } from 'react-scroll-parallax';
 import Hero from "../components/Hero";
 import { Post } from '../types';
+
 import { postFilePaths, POSTS_PATH } from '../utils/mdxUtils';
 
 
@@ -42,7 +44,6 @@ const Home: NextPage<{ posts: Post[] }> = ({ posts }) => {
         <meta property="og:title" content="קוגניטיבי" />
         <meta property="og:type" content="article" />
         <meta property="og:description" content="בלוג אישי, שנועד בעיקרו עבורי - לזכור פרויקטים, מחקרים וגם סתם מחשבות. מקווה שתהנו לקרוא." />
-        {/* <meta property="og:url" content="http://euro-travel-example.com/index.htm" /> */}
       </Head>
 
       <Hero />
@@ -59,9 +60,8 @@ const Home: NextPage<{ posts: Post[] }> = ({ posts }) => {
   );
 };
 
-
 export function getStaticProps() {
-  const posts = postFilePaths.map((filePath) => {
+  let posts = postFilePaths.map((filePath) => {
     const source = fs.readFileSync(path.join(POSTS_PATH, filePath))
     const { content, data } = matter(source)
 
@@ -71,6 +71,13 @@ export function getStaticProps() {
       filePath,
     }
   })
+
+  posts.sort((postA, postB) => {
+    const dateA = moment(postA.data.createdAt, 'DD-MM-YYYY').toDate();
+    const dateB = moment(postB.data.createdAt, 'DD-MM-YYYY').toDate();
+
+    return dateB.getTime() - dateA.getTime()
+  });
 
   return { props: { posts } }
 }
