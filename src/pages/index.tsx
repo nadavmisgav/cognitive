@@ -25,7 +25,7 @@ const PostSummary: React.FC<{ post: Post }> = ({ post }) => {
       <span className="grow w-full text-xs sm:text-base">{post.data.category} / {post.data.createdAt} </span>
       <img className="post-summary-img" loading="lazy" src={post.data.image} />
       <div className="flex grow flex-wrap my-4 sm:max-w-[60%] ">
-        <p className="text-gray-300 grow w-full sm:text-base xl:text-xl xl:leading-7 sm:min-h-[10vh]">
+        <p className="text-gray-300 grow w-full sm:text-base xl:text-xl xl:leading-7 sm:min-h-[14vh]">
           {post.data.description}
         </p>
       </div>
