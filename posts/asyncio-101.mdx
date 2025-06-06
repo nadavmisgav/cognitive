@@ -1,24 +1,292 @@
 ---
 title: asyncio 101
 category: פייתון
-createdAt: 27.05.2025
+createdAt: 30.05.2025
 description: גג
 image: https://images.unsplash.com/photo-1530686350401-7de25243dd89?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2071&q=80
 ---
 
 ## מקביליות
 
-הקדמה על ההבדל בין
-concurrency vs parallelism
+אתחיל להסתייג ולהגיד שכבר למילה מקביליות יש הרבה פרשוניות בעולם של התוכנה אך גם בעולם של בני אדם.
+שבן אדם אומר על עצמו שהוא
+multi tasker,
+יודע לעשות הרבה דברים במקביל.
+למעשה אנחנו מבינים שבפועל לא הכל הוא יכול לעשות במקביל.
+לדוגמה לערבב סיר מרק ולדבר בטלפון אפשר במקביל.
+אך לקפל כביסה ולשחק עם הכלב אי אפשר במקביל, אך ניתן לעשות זאת בצורה שדומה למקבילית.
+לדוגמה לזרוק לכלב כדור ובזמן שהוא רץ להביא להספיק לגלגל זוג גרביים.
+במערכות הפעלה זה מאד דומה, יהיו דברים שנוכל לעשות ממש במקביל ויהיו דברים שנוכל לעשות בצורה ש"כמעט" מקבילית.
+לשתי הפרשוניות האלו של מקביליות ניתן שמות שונים:
+
+1. concurrency - לפעמים שאשתמש בו במונח ריצה אסינכרונית.
+2. parallelism - ריצה מקבילית אמיתית.
+
+אם נמשיך באנולוגיה של בני אדם, אז לערבב סיר ולדבר בטלפון ניתן לעשות במקביל כי אחד דורש אוזן ואולי גם את הקשב שלנו.
+אך לערבב סיר דורש יד פנויה.
+את שתי הפעולות ניתן לעשות במטבח אז אפשר לעשות אותם במקביל.
+לעומת זריקת כדור לכלב שדורש את הידיים ואת תשומת הלב שלנו וגם לקפל כביסה דורש את הידיים -
+אבל נשים לב שלמעשה בזריקת כדור לכלב יש בכל זריקה כמה עשרות שניות פנויות בהם למעשה הידיים פנויות וניתן לנצל את רגע ההמתנה לכלב כדי לקפל גרב.
+
+כאשר מסתכלים על מחשבים יעניין אותנו דברים שונים, כמות המעבדים (כולל ליבות של אותו מעבד)
+יגדירו כמה פעולות אולי אפשר לעשות במקביל ומשאבים כמו כרטיס רשת או רכיב זיכרון הם משאבים שהגישה אליהם יכולה לקחת זמן שלא תלוי במעבד ועל כן בדומה לכלב, נחכה להם שיסתיימו.
+בואו נצלול לדוגמה שתמחיש את כל זה.
+
+```python
+def foo(s: str, log_file: pathlib.Path) -> int:
+    v = 0
+    with log_file.open("w") as f:
+        for i, c in enumerate(s):
+            v = (v * 31 + ord(c)) % (2**32)
+            f.write(f"Step {i}: c='{c}', ord={ord(c)}, v={v}\n")
+    return v
+
+
+def bar(s: str, log_file: pathlib.Path) -> int:
+    v = 5381
+    with log_file.open("w") as f:
+        for i, c in enumerate(s):
+            v = ((v << 5) + v) + ord(c)
+            f.write(f"Step {i}: c='{c}', ord={ord(c)}, v={v & 0xFFFFFFFF}\n")
+    return v & 0xFFFFFFFF
+```
+
+בדוגמה הזאת (וגם בשאר נניח בשביל פשטות מעבד אחד עם ליבה אחת)
+שתי הפונקציות מריצות פעולת חישוב שדורשת את המעבד וכותבות את שלבי החישוב לקובץ, לא ניתן להריץ אותם בצורה מקבילית על מעבד אחד.
+כי שתי הפונקציות דורשות זמן חישוב, אך נשים לב לכך שלמעשה כתיבה לקובץ לוקחת זמן שלא תלוי במעבד.
+כלומר לא ניתן להריץ במקביל אך בדומה לדוגמה עם הכלב יש זמן שבו אנחנו רק מחכים לכתיבה של השורה לדיסק.
+בזמן שמערכת הפעלה כותבת את הפלט לזיכרון למעשה הקוד שלנו לא מבצע שום פעולה.
+
+> לחובבי לינוקס
+> הtask_struct
+> שמייצג את הריצה שלנו עובר ממצב
+> TASK_RUNNING
+> ל
+> TASK_INTERRUPTIBLE
+> וכך ניתן ל
+> task_structים
+> (כלומר פונקציות שונות - בהפשטה)
+> לרוץ.
+> כלומר ניתן להריץ את שתי הפונקציות האלו בצורה אסינכרונית
+> (concurrently).
+
+טוב כל זה מגניב בתיאוריה אבל שווה לראות דוגמה למימוש של זה בפייתון,
+כלומר איך בפועל אני מנצל ה"מקביליות" הזאת.
+בכל שפה יש קונספט דומה אז מוזמנים לחפש
+concurrency
+בכל שפה שאתה עובדים בה.
+נשתמש בספריה של פייתון שנקראית
+asyncio
+ובשתי
+keywords
+שהם חלק מהשפה
+async וawait.
+נלך על פונקציות יותר פשוטות שרק מדפיסות כל פרק זמן קבוע הודעה למסך.
+
+```python
+import asyncio
+
+async def write(delay: int) -> None:
+    for i in range(5):
+        await asyncio.sleep(delay)
+        print(f"Write {i} after {delay} seconds")
+
+async def main():
+    await asyncio.gather(
+        write(1),
+        write(2)
+    )
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+בדוגמה ניתן לראות כי הפונקציית
+`write`
+מדפיסה למסך ומחכה פרק זמן קבוע.
+כאשר למעשה אנחנו עכשיו כבר מבינים שבזמן שהפונקציה "מחכה", משתמשת ב
+`await asyncio.sleep(delay)`,
+ניתן להריץ
+"במקביל"
+פונקציה נוספת.
+בואו נפרק את הדוגמה לכמה חלקים.
+
+1. כל פונקציה שאנחנו רוצים שתעבוד בצורה אסינכרונית נגדיר עם `async`.
+2. כאשר אנחנו רוצים לחכות לפעולה אסינכרונית נשתמש ב`await` - ניגע בזה יותר בהמשך אבל נחמד לחשוב עכשיו מה היה קורה אם היינו מחליפים את ה`asyncio.sleep` ב`time.sleep`.
+3. כדי להריץ ולחכות לכמה פעולות אסינכרוניות נשתמש ב`asyncio.gather` - יש עוד דרכים שנדבר עליהם בהמשך.
+4. בסוף כדי להריץ קוד אסינכרוני נשתמש ב`asyncio.run` - שזה לב הקסם בקוד אסינכרוני ואליו נצלול.
 
 ## איך קונספטואלית זה עובד
 
-צריך event loop
-איך זה נקרא בכל שהוספתי
+נתחיל מלנסות להמחיש מה היינו רוצים, תסתכלו על הפסודו קוד הבא.
 
-## מושגים
+```python
+while True
+    tasks = _get_ready_tasks()
+    for task in tasks:
+        task.run_until_awaited()
+```
 
-future/promise
+ללולאה הזאת נקרא
+הevent loop.
+הevent loop
+אחראי על ניהול תור המשימות שיש לו, הרצתם עד לפעולה בולקת
+(`await`)
+והמשכתם ברגע שאפשר.
+כדי לממש את המגנון הזה משתמשים בלא מעט פרימיטיבים, רובם קונספטים תכנוניים אך חלקם קשורים למימושים של מערכת ההפעלה שתומכים את הפעולות האסינכרוניות
+כמו מנגנון
+ה`select`
+ו`mutex`
+ב`UNIX`.
+כדי להבין את המושגים השונים נתחיל להתעמק בהם אחד אחד.
+
+### מושגים
+
+#### future
+
+Future
+הוא המושג למעשה הכי בסיסי שאנחנו מדברים על תכנות אסיכרוני,
+בשפות אחרות הוא נקרא
+Promise
+ואולי דווקא השם הזה יקל על ההבנה שלנו.
+Future
+הוא למעשה אובייקט אשר מייצג ערך עתידי (או הבטחה לערך) ולכן השם.
+כדי להבין את זה בואו נסתכל על הדוגמה הבאה, בא אני רוצה להדפיס הודעה שמגיעה ממישהו חיצוני.
+
+```python
+def read_message(on_message_cb: Callable[[str], None]):
+    message = _read(...)
+    on_message(message)
+
+def main():
+    def _on_message_cb(message: str) -> None
+        print(message)
+    read_message(on_message_cb=_on_message_cb)
+    # do more stuff until message arrives
+```
+
+כאן אנחנו משתמשים
+בpattern
+תכנותי שהוא
+callbacks.
+אנחנו מביאים לפונקציה פונקציה שאנחנו רוצים שתבצע ברגע שאירוע קורה,
+במקרה הזה שהודעה מגיעה.
+השימוש
+בfutures
+עוזר לנו לעשות זאת וגם מאפשר לנו לחכות לתוצאה העתידית הזאת.
+
+```python
+from concurrent.futures import Future
+
+def read_message(future_result: Future[str]):
+    message = _read(...)
+    future_result.set_result(message)
+
+def main():
+    future_result = Future[str]()
+    read_message(future_result)
+    result = future_result.result() # blocks and waits for result
+    print(result)
+```
+
+המנגנון שמאפשר לנו לחכות לתוצאה משתמש מאחורי הקלעים
+בmutexים
+(או יותר מדויק ב`threading.Condition` שהוא משתמש ב`mutex`ים).
+המנגנון דיי מגניב למעשה כאשר אנחנו יוצרים את
+הfuture
+אנחנו נתפוס
+`mutex`
+ישר.
+כאשר אנחנו קוראים
+ל`set_result`
+זה משחרר אותו וכשאנחנו קוראים
+ל`result`
+אנחנו שוב מנסים לתפוס אותו ולכן למעשה עד שאין תוצאה
+(קראו ל`set_result`)
+אנחנו "נתקע".
+למעשה הספריות של פייתון משתמשות
+בfutures
+כדי לאפשר לנו עבודה מקבילית נסתכל על הדוגמה הבאה שמשתמשת
+בthreadים
+כדי להריץ שתי פעולות בולקות במקביל ומשתמשת
+בfutures
+על מנת לקבל את ערכי ההחזרה.
+
+```python
+from concurrent.futures import Future
+import time
+
+def do_work_in_thread(f: Future[str]):
+    sleep(2)
+    f.set_result("Done from thread!")
+
+f1 = Future[str]()
+f2 = Future[str]()
+Thread(target=do_work_in_thread, args=(f1,)).start()
+Thread(target=do_work_in_thread, args=(f2,)).start()
+
+print("Waiting for results...")
+result1 = f1.result()  # This will block until the thread completes
+result2 = f2.result()  # This will block until the thread completes
+print("Results:", result1, result2)
+```
+
+עוד דרך לעשות את זה בצורה קצת יותר מודרנית בפייתון היא באמצעות
+ThreadPoolExecutor.
+
+```python
+from concurrent.futures import ThreadPoolExecutor, Future
+import time
+
+def do_work_in_thread() -> str:
+    time.sleep(2)
+    return "Done from thread!"
+
+with ThreadPoolExecutor(max_workers=2) as executor:
+    start = time.perf_counter()
+    future: Future[str] = executor.submit(do_work_in_thread)
+    future2: Future[str] = executor.submit(do_work_in_thread)
+
+    print("Waiting for result...")
+    result = future.result()  # This will block until the thread completes
+    result2 = future2.result()  # This will block until the thread completes
+    print(result, result2)
+    print(f"Elapsed time: {time.perf_counter() - start:.2f} seconds")
+```
+
+אפשר לראות שאנחנו בעצם מעצילים משימות
+לThreadPoolExecutor
+והוא מחזיר לנו
+futures
+עבור כל פעולה שהעצלנו אליו.
+אם מריצים את הקוד כמו שהוא נראה שזה לקח 2 שניות בדיוק, אך אם נאפשר
+לpool
+רק
+worker
+אחד, נראה כי זה יקח 4 שניות.
+כלומר למעשה באמצעות
+threadים
+ביצענו כמה פעולות במקביל
+ובאמצעות
+futureים
+חיכינו שהם הסתיימו וקיבלנו את ערכי ההחזרה.
+הספריה של
+ThreadPoolExecutor
+רק עוטפת לנו את העבודה עם
+threadים
+וfutureים
+אבל כמו שניתן לראות בדוגמה הראשונה אפשר ליצור את
+הthreadים
+ואת
+הfutureים
+להעביר לכל
+thread
+שמבצע משימה,
+future,
+שאליו יכתוב את התוצאה -
+לבסוף נחכה לכל
+הfutureים.
+
 task
 loop
 courtine
