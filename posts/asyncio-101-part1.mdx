@@ -1,0 +1,344 @@
+---
+title: asyncio 101 - חלק א'
+category: פייתון
+createdAt: 30.05.2025
+description: גג
+image: https://images.unsplash.com/photo-1530686350401-7de25243dd89?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2071&q=80
+---
+
+## הקדמה
+
+יצא לי לכתוב לא מעט
+בpython
+וגם
+בtypescript
+במשך השנים
+ובשניהם לכתוב גם לא מעט קוד שמשתתמש
+בasync
+וawait.
+לרמה שאני מרגיש מאד בנוח עם שניהם עם
+הsyntax
+וגם עם המקרים המיוחדים שצריכים לחשוב עליהם.
+בtypescript
+יצא לי יותר להתעמק במאחורי הקלעים של איך זה עובד כי גם לא פעם
+אתה נדרש לדוגמה
+בreact
+לחשוב על מה קורה מאחורי הקלעים.
+אך הבנתי
+שבpython
+לא יצא לי להתעמק,
+עם כי ברור לי שהעקרונות התכנותיים זהים גם המימוש מעניין אותי מאד.
+התחלתי לקרוא וללמוד, והדרך שבה אני אוהב לעשות את זה היא גם לכתוב
+וככל שקראתי הבנתי כמה אני לא יודע.
+
+בהתחלה חשבתי רק לקרוא ולכתוב על
+הapi
+שהספריה
+`asyncio`
+חושפת, אבל בניסיונות שלי להסביר את הספריה
+מצאתי את עצמי יותר ויותר צריך להסביר קונספטים בסיסיים יותר שלהפתעתי גיליתי שגם אותם לא תמיד הבנתי עד הסוף.
+הבנתי שזה יותר מידי לפוסט אחד והחלטתי לחלק את זה לשני פוסטים, כאשר כל אחד יגע ברובד אחר.
+הראשון ינסה להסביר את הקונספט הבסיסי של תכנות אסינכרוני תוך מעבר על דוגמאות ובעיות עד לכתיבת קוד אסינכרוני ללא הספריה
+`asyncio`,
+ואילו השני באמת יצלול לספריה
+מהapi
+הבסיסי ועד למקרי קצה מעניינים שנתקלים בהם.
+הם יהיו כתובים בצורה בלתי תלויה כך שיהיה ניתן לקרוא בכל סדר ורק מה שמעניין אתכם.
+
+אני כן ממליץ לקרוא אותם לפי סדר, אם משהו אחד בטוח למדתי מכל זה - זה כמה אני לא מבין.
+
+## מקביליות
+
+אתחיל להסתייג ולהגיד שכבר למילה מקביליות יש הרבה פרשוניות בעולם של התוכנה אך גם בדיבור השגור שלנו.
+שבן אדם אומר על עצמו שהוא
+multi tasker,
+יודע לעשות הרבה דברים במקביל.
+למה הוא מתכןן ?
+בפועל לא הכל הוא יכול לעשות במקביל.
+לדוגמה לערבב סיר מרק ולדבר בטלפון אפשר במקביל.
+לקפל כביסה ולשחק עם הכלב אי אפשר במקביל.
+או שבעצם אפשר "כמעט" במקביל?
+לדוגמה לזרוק לכלב כדור ובזמן שהוא רץ להביא להספיק לגלגל מהר מהר זוג גרביים.
+במערכות הפעלה זה מאד דומה, יהיו דברים שנוכל לעשות ממש במקביל ויהיו דברים שנוכל לעשות בצורה ש"כמעט" מקבילית.
+לשתי הפרשוניות האלו של מקביליות ניתן שמות שונים:
+
+1. concurrency - כאשר אני מתכןן "כמעט" מקבילית, לפעמים אשתמש במונח ריצה אסינכרונית.
+2. parallelism - ריצה מקבילית אמיתית.
+
+אם ננסה רגע לדייק את ההבדל ונחזור לאנלוגיה שנתתי על בני אדם.
+למעשה ניתן ביד אחת לערבב סיר וביד השנייה לדבר בטלפון (או אפילו להניח על רמקול) ניתן לעשות במקביל כי אחד דורש אוזן ואולי גם את הקשב שלנו.
+אך לערבב סיר דורש יד פנויה ולא הרבה קשב.
+את שתי הפעולות ניתן ממש לעשות במקביל, ביחד.
+אך שאני זורק כדור לכלב, אני צריך את היד ואולי להסתכל גם לאן זורק,
+וגם כאשר אני מקפל גרביין אני צריך את היד ולהסתכל איפה אני מוצא זוג תואם.
+אך אני מנצל את רגע הריצה של הכלב וחזרה, כרגע פנוי שבו אני יכול לעשות משימה אחרת
+ואני סומך על הכלב שימשוך את תשומת ליבי שהוא חוזר עם הכדור.
+
+![Women multitasking](../sketches_side_by_side.png "Women multitasking")
+
+כאשר מסתכלים על מחשבים יעניין אותנו דברים שונים, כמות המעבדים (כולל ליבות של אותו מעבד)
+יגדירו כמה פעולות אולי אפשר לעשות במקביל ומשאבים כמו כרטיס רשת או רכיב זיכרון הם משאבים שהגישה אליהם יכולה לקחת זמן שלא תלוי במעבד ועל כן בדומה לכלב, נחכה להם שיסתיימו.
+אפשר בקלות להסתבך עם דוגמאות של כתיבה לרשת או למערכת הקבצים, אך אני רוצה יותר להתמקד
+במהות ולכן בואו נסתכל על דוגמה של עבודה שאותו נסמלץ על ידי
+`sleep`
+בכל פעם שתראו את זה אתם יכולים לדמיין שזה המתנה לכתיבה לדיסק או לקבלת הודעה מהרשת.
+בנוסף אשתדל שכל הדוגמאות יהיו ניתנות להרצה כפי בדיוק כפי שהם כדי שתוכלו להריץ בעצמכם, במקרים שלא אציין זאת.
+
+## הבעיה
+
+```python
+import time
+
+def throw_ball() -> None:
+    while True:
+        print(f"Throw ball")
+        time.sleep(5)  # simulate the time it takes the dog to run back
+
+def fold_laundry() -> None:
+    while True:
+        print(f"Fold laundry")
+        time.sleep(1)  # simulate the time it takes to fold
+```
+
+הנה מימוש של הפעולות שתיארנו קודם, איך ניתן להריץ אותם במקביל ?
+אם נריץ את
+`throw_ball`
+נחסום לנצח בזריקת כדור והמתנה
+ואם נריץ את
+`fold_laundry`
+נחסום לנצח בקיפול - עינוי לכל בר דעת.
+אפשרות אחד זה לנצל את התמיכה של מערכת ההפעלה בכמה
+threadים.
+
+```python
+from threading import Thread
+
+thread1 = Thread(target=throw_ball)
+thread2 = Thread(target=fold_laundry)
+
+thread1.start()
+thread2.start()
+
+# This will block forever while we do both jobs
+thread1.join()
+thread2.join()
+```
+
+אבל זה רמאות כי למעשה אנחנו מנצלים את זה שמערכת ההפעלה מאפשרת עוד סוגים של מקביליות.
+האם ניתן לעשות זאת באותו
+הthread.
+מה בעצם הפרימיטב שאנחנו מחפשים ?
+היינו רוצים שכאשר אחת מהפונקציות קוראת
+ל`sleep`
+היא לא תחסום את הריצה של כל הקוד אלא תוותר על הזמן שלה עד לפעם הבאה שיתנו לה.
+במילים אחרות כאשר אנחנו "מחכים" לכלב היינ רוצים לאפשר לפונקציה של הקיפול כביסה לרוץ.
+הפרימיטב שאנחנו ממומש
+בpython
+באמצעות גנרטורים, ולטובת מי שלא מכיר אסביר כעת איך גנרטורים עובדים - מי שמכיר יכול לדלג, אבל שוב...
+
+## גנרטורים
+
+גנרטורים
+(generators)
+למעשה מאפשרים לייצר פונקציה שמתנהגת כמו
+iterator,
+כלומר שאפשר "לרוץ" עליה.
+לרוב נשתמש בזה כאשר אנחנו רוצים לייצר רשימה שהחישוב של כל איבר ברשימה הוא קשה,
+לכן לא נרצה לחשב אותה מראש אלא רק על פי דרישה.
+בואו נראה דוגמה פשוטה.
+
+```python
+from typing import Generator
+
+
+def generator_example() -> Generator[int, None, None]:
+    """A simple generator that yields numbers from 0 to 4."""
+    for value in range(3):
+        print(f"Sending value: {value}")
+        yield value
+
+# Iterating using for-loop
+for value in generator_example():
+    print(f"Received value: {value}")
+
+# Sending value: 0
+# Received value: 0
+# Sending value: 1
+# Received value: 1
+# Sending value: 2
+# Received value: 2
+```
+
+ניתן לראות את השימוש בגנרטור פשוט שרק מייצר לנו מספרים, בכל פעם שהקוד מגיע
+ל`yield`
+הוא מחזיר את השליטה לפונקציה הראשית שמדפיסה את הערך שחזר.
+אפשרות נוספת שקצת פחות אנשים מכירים זה שאפשר לשלוח לגנרטור גם ערכים חזרה ולא רק לקבל ממנו ערכים, בדוגמה הבאה נשתמש בגנרטור
+כדי ליצור ממוצע "דינאמי" של מספרים.
+
+```python
+from typing import Generator
+
+
+def avg_generator() -> Generator[float, int, None]:
+    """A generator that calculates the average of numbers sent to it."""
+    total = 0
+    count = 0
+    while True:
+        number = yield total / count if count > 0 else 0
+        total += number
+        count += 1
+
+avg_gen = avg_generator()
+next(avg_gen)  # Initiate the generator, runs to the first yield
+print("Average generator created. Sending values...")
+for i in range(1, 6):
+    avg = avg_gen.send(i)
+    print(f"Sent {i}, received average: {avg}")
+```
+
+אז לסיכום גנרטורים מאפשרים לנו בגדול שני דברים,
+
+1. לעצור את הריצה באמצע עם ערך החזרה באמצעות `yield`.
+2. להמשיך את הריצה מהנקודה האחרונה ולקבל ערך מהשולט באמצעות `.send(...)` או `next`.
+
+## חזרה לבעיה
+
+למה זה מגניב ?
+בואו נראה עכשיו איך נממש את הדוגמה של
+הthreadים
+רק עם
+generatorים.
+נתחיל מלבנות פונציה שמדמה לנו שינה.
+
+```python
+import time
+from typing import Generator
+
+
+def my_sleep(seconds: float) -> Generator[None, None, None]:
+    start_time = time.time()
+    while time.time() - start_time < seconds:
+        yield  # Yield control back to event loop
+```
+
+בפונקציה הזאת אנחנו למעשה בודקים עם עברו כמות השניות שרצינו ואם לא אנחנו מחזירים שליטה על ידי קריאה
+ל`yield`
+ולמעשה המימוש של הדוגמה עכשיו עם שימוש
+בsleep
+החדש, נראה כך.
+
+```python
+from typing import Generator
+
+
+def throw_ball() -> Generator[None, None, None]:
+    while True:
+        print(f"Throw ball")
+        # `yield from` is a syntactic sugar to receiving values until there are no more
+        # hence, this will receive `None` until 5 seconds have passed.
+        yield from my_sleep(5)  # simulate the time it takes the dog to run back
+
+def fold_laundry() -> Generator[None, None, None]:
+    while True:
+        print(f"Fold laundry")
+        yield from my_sleep(1)  # simulate the time it takes to fold
+
+task_queue = [throw_ball(), fold_laundry()]
+
+# Run event loop
+while len(task_queue) > 0:
+    for task in task_queue[:]:
+        try:
+            result = next(task)  # Run the task until it yields
+        except StopIteration as res: # Task completed - in this example they will never finish
+            print(f"Task completed, result:{res}")
+            task_queue.remove(task)
+
+# Throw ball
+# Fold laundry
+# Fold laundry
+# Fold laundry
+# Fold laundry
+# Fold laundry
+# Throw ball
+# Fold laundry
+# Fold laundry
+# Fold laundry
+```
+
+ללולאת
+ה`while`
+המרכזית שרצה נקרא
+הevent loop.
+המונח הזה שגור ברוב שפות התכנות.
+הevent loop
+אחראי על להריץ לנו כמה
+taskים
+בצורה "כמעט" מקבילית.
+אז מה בעצם קורה פה ?
+כל פעם אנחנו זורקים כדור לכלב ואז קוראים
+ל`my_sleep`
+הוא מוודא כמה זמן עבר, אם לא עברו 5 שניות
+הוא מחזיר את השליטה
+(באמצעות `yield`)
+חזרה
+לevent loop
+שלנו.
+הevent loop
+יכול לעבור למשימה הבאה, קיפול כביסה, שגם מחזירה שליטה לאחר כל קיפול.
+למעשה
+הevent loop
+ירוץ כל עוד יש לנו משימות, שבמקרה הזה תמיד יש משימה מכיוון ששניהם פועלות בלולאה אינסופית.
+וזהו!
+מימשנו
+בthread
+אחד,
+event loop
+שמריץ כמה משימות "כמעט" במקביל.
+
+עכשיו שיש לנו קצת יותר הבנה למה זה אומר תכנות אסיכרוני ואיך אפשר לממש אותו, נרצה דרך קלה יותר שלא
+דורשת מאיתנו להתעסק בחלק הטכני של הרצה אסינכרונית.
+לפה מגיעה הספריה
+`asyncio`
+של
+python,
+יחד עם
+שני
+keywords
+חדשים -
+`async/await`.
+אנקדוטה אחרונה, שאותה גיליתי במהלך הלמידה שלי ובגללה התעקשתי להסביר
+על גנרטורים גם - המימוש של
+`asyncio`
+מבוסס על
+api
+זהה
+לגנרטורים.
+בפועל מה שזה אומר זה שאנחנו יודעים כעת לכתוב קוד אסינכרוני ולתת לספריה להריץ אותו ואת זה קחו כהצצה להמשך.
+
+```python
+import asyncio
+import time
+
+
+class my_sleep:
+    def __init__(self, seconds: float):
+        self.seconds = seconds
+
+    def __await__(self):
+        start_time = time.time()
+        while time.time() - start_time < self.seconds:
+            yield  # Yield control back
+
+async def main():
+    print("Starting main")
+    start = time.perf_counter()
+    await my_sleep(3)
+    print(f"Elapsed time: {time.perf_counter() - start:.2f} seconds")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# Starting main
+# Elapsed time: 3.00 seconds
+```
