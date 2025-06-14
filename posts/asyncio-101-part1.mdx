@@ -246,13 +246,15 @@ from typing import Generator
 def throw_ball() -> Generator[None, None, None]:
     while True:
         print(f"Throw ball")
-        # `yield from` is a syntactic sugar to receiving values until there are no more
-        # hence, this will receive `None` until 5 seconds have passed.
-        yield from my_sleep(5)  # simulate the time it takes the dog to run back
+         # simulate the time it takes the dog to run back
+        for value in my_sleep(5):
+            yield value
 
 def fold_laundry() -> Generator[None, None, None]:
     while True:
         print(f"Fold laundry")
+        # `yield from` is a syntactic sugar to yielding values until there are no more
+        # similar to the for loop in `throw_ball` hence, this will yield `None` until 1 seconds have passed.
         yield from my_sleep(1)  # simulate the time it takes to fold
 
 task_queue = [throw_ball(), fold_laundry()]
@@ -260,11 +262,8 @@ task_queue = [throw_ball(), fold_laundry()]
 # Run event loop
 while len(task_queue) > 0:
     for task in task_queue[:]:
-        try:
-            result = next(task)  # Run the task until it yields
-        except StopIteration as res: # Task completed - in this example they will never finish
-            print(f"Task completed, result:{res}")
-            task_queue.remove(task)
+        result = next(task)  # Run the task until it yields
+        # add code to remove the task if it is done
 
 # Throw ball
 # Fold laundry
@@ -308,8 +307,13 @@ while len(task_queue) > 0:
 אחד,
 event loop
 שמריץ כמה משימות "כמעט" במקביל.
+חשוב להבין אז שאם אנחנו מייצרים משימה שלא עושה
+`yield`,
+היא תתקע את
+הevent loop
+עד שתסיים, ושאר המשימות לא יוכלו להתבצע במקביל אליה.
 
-אם ההבנה החדשה של תכנות אסינכרוני ואיך אפשר לממש אותו, נרצה דרך קלה יותר שלא
+עם ההבנה החדשה של תכנות אסינכרוני ואיך אפשר לממש אותו, נרצה דרך קלה יותר שלא
 דורשת מאיתנו להתעסק בחלק הטכני של הרצה אסינכרונית.
 לפה מגיעה הספריה
 `asyncio`
