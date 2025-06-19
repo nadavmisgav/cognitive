@@ -1,0 +1,638 @@
+---
+title: asyncio 101 - חלק ב'
+category: פייתון
+createdAt: 13.06.2025
+description: בפוסט זה אני ממשיך את הלימוד שלי על asyncio. אני מנסה ללמוד על הinternals דרך מעבר על הapi ועל מקרי קצה ומימושים מעניינים בדרך. בפוסט אני מדבר על future, coroutine, loop וtask. הפוסט הזה מנסה להיות יחסית לימודי, לא יודע כמה אני אוהב את זה אבל ככה יצא.
+image: https://images.unsplash.com/photo-1491252807115-39d1d4a93d7a?q=80&w=1260&h=750&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D
+---
+
+## מבוא
+
+הספריה
+`asyncio`,
+ביחד עם שימוש
+בsyntax
+של פייתון
+`async/await`
+מאפשרת יצירה והרצה נוחה של קוד אסינכרוני.
+בספריה יש לא מעט מושגים, והמון קריאות
+API.
+כדי לנסות להבין אותה נעבור בין המושגים השונים
+תוך כדי שימוש
+בAPI
+ובתקווה כך נצבור הבנה עמוקה יותר,
+בנוסף נסיים בכמה מקרי קצה מעניינים.
+
+## מושגים
+
+### future
+
+נתחיל דווקא מהמושג
+Future
+שלא מגיע מהספריה
+`asyncio`
+אלא
+מ`concurrent.futures`
+אבל
+הוא המושג למעשה הכי בסיסי שאנחנו מדברים על תכנות אסינכרוני.
+בשפות אחרות הוא נקרא
+Promise
+ואולי דווקא השם הזה יקל על ההבנה שלנו.
+Future
+הוא למעשה אובייקט אשר מייצג ערך עתידי (או הבטחה לערך) ולכן השם.
+כדי להבין את זה בואו נסתכל על הדוגמה הבאה, בה אני רוצה להדפיס הודעה שמגיעה ממישהו חיצוני.
+השימוש
+בfutures
+עוזר לנו לעשות זאת וגם מאפשר לנו לחכות לתוצאה העתידית הזאת.
+
+```python
+from concurrent.futures import Future
+
+def read_message(future_result: Future[str]) -> None:
+    message = _read(...)
+    future_result.set_result(message)
+
+def main():
+    future_result = Future[str]()
+    read_message(future_result)
+    result = future_result.result() # blocks and waits for result
+    print(result)
+```
+
+המנגנון שהספריה משתמשת בו כדי לעזור לנו לחכות לתוצאה הוא
+בmutexים
+(או יותר מדויק ב`threading.Condition` שהוא משתמש ב`mutex`ים).
+המנגנון דיי מגניב למעשה כאשר אנחנו יוצרים את
+הfuture
+אנחנו נתפוס
+`mutex` (מנעול)
+ישר.
+כאשר אנחנו קוראים
+ל`set_result`
+זה משחרר אותו וכשאנחנו קוראים
+ל`result`
+אנחנו שוב מנסים לתפוס אותו ולכן למעשה עד שאין תוצאה
+(קראו ל`set_result`)
+אנחנו "נתקע".
+הספריות של פייתון משתמשות במימוש שלהם
+בfutures
+כדי לאפשר לנו עבודה מקבילית נסתכל על הדוגמה הבאה שמשתמשת
+בthreadים
+כדי להריץ שתי פעולות בולקות במקביל ומשתמשת
+בfutures
+על מנת לקבל את ערכי ההחזרה.
+
+```python
+from concurrent.futures import ThreadPoolExecutor, Future
+import time
+
+def do_work_in_thread() -> str:
+    time.sleep(2)
+    return "Done from thread!"
+
+with ThreadPoolExecutor(max_workers=2) as executor:
+    start = time.perf_counter()
+    future: Future[str] = executor.submit(do_work_in_thread)
+    future2: Future[str] = executor.submit(do_work_in_thread)
+
+    print("Waiting for result...")
+    result = future.result()  # This will block until the thread completes
+    result2 = future2.result()  # This will block until the thread completes
+    print(result, result2)
+    print(f"Elapsed time: {time.perf_counter() - start:.2f} seconds")
+```
+
+אנחנו מעצילים משימות
+ל`ThreadPoolExecutor`
+והוא מחזיר לנו
+futures
+עבור כל פעולה שהעצלנו אליו.
+באמצעות
+threadים
+ביצענו כמה פעולות במקביל
+ובאמצעות
+futureים
+חיכינו שהם יסתיימו וקיבלנו את ערכי ההחזרה.
+הספריה של
+`ThreadPoolExecutor`
+רק עוטפת לנו את העבודה עם
+threadים
+וfutureים.
+תכונה נוספת היא שלכל
+future
+ניתן להוסיף
+callback
+שיקרא ברגע
+שהfuture
+מקבל ערך,
+באמצעות המתודה
+`add_done_callback`.
+
+כדי לנצל את
+`asyncio`,
+את
+ה`future`ים
+אפשר לעטוף באמצעות הספריה ואז להשתמש בהם ביחד עם
+`await`
+באופן הבא.
+נעטוף
+באמצעות
+`asyncio.wrap_future`
+את
+הfutureים
+שמגיעים מהספריה
+`concurrent.futures`
+לאובייקט
+ש`asyncio`
+יודע לעבוד איתו.
+
+```python
+async def main():
+    with ThreadPoolExecutor() as executor:
+        ...
+        future = executor.submit(do_work_in_thread)
+        result = await asyncio.wrap_future(future)  # This will block until the thread completes
+        ...
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+את ההרצה של הקוד האסינכרוני נעשה על ידי
+`asyncio.run`
+אך שימו לב, לפונקציה הזאת אפשר לקרוא רק פעם אחת בכל
+`thread` -
+היא הפונקציית כניסה שלנו לקוד האסינכרוני, אחראית על הרצת
+הevent loop.
+
+### loop
+
+loop
+הוא
+הevent loop
+שממומש עבורנו
+בPython,
+יש כמה מימושים תלוי מערכת הפעלה.
+כדי לקבל
+loop
+נקרא
+`asyncio.get_event_loop`
+אם לא נוצר אחד זה ייצור לנו אחד ברירת מחדל.
+אפשרות נוספת כדי לגשת
+לloop
+הנוכחי בהינתן שאנחנו כבר רצים בקוד אסינכרוני,
+זה לקרוא
+ל`asyncio.get_running_loop`
+אך אם אין כזה תזרק שגיאה.
+אם רוצים אפשר גם "בכוח" לייצר
+loop
+חדש עם
+`asyncio.new_event_loop`.
+
+בגרסאות
+Python
+גדולות מ3.12
+`get_event_loop`
+נחשב
+deperecated
+ומומלץ או ליצור
+loop
+או לקבל את האחד שרץ כרגע באמצעות
+`get_running_loop`.
+
+לloop
+כמה פונקציות כדי להריץ קוד אסינכרוני,
+`loop.run_forever`
+ו`loop.run_until_complete`.
+למעשה המימוש של
+`loop.run_until_complete`
+מתבצע על ידי הוספת
+callback.
+הcallback
+נקרא כאשר
+הfuture
+סיים את הריצה שלו ומה שהוא עושה הוא לזרוק שגיאה.
+לשגיאה
+`run_until_complete`
+דואג לטפל וככה יודע שאפשר לסיים,
+אבל מאחורי הקלעים הוא גם יריץ את
+`loop.run_forever`,
+טריק חמוד!
+אז בואו נראה רגע את כל זה ביחד בשימוש,
+
+```python
+import asyncio
+
+async def work() -> str:
+    print("Working")
+    await asyncio.sleep(3)
+    return "Work done"
+
+loop = asyncio.get_event_loop()
+asyncio.set_event_loop(loop)
+try:
+    res = loop.run_until_complete(work())
+    print("Result:", res)
+finally:
+    loop.close()
+    asyncio.set_event_loop(None)
+```
+
+השתמשתי פה בעוד פונקציה
+`asyncio.set_event_loop`
+התפקיד שלה זה שבפעם הבאה שמישהו יקרא ל
+`asyncio.get_event_loop`
+אז יהיה כבר
+loop
+רשום. בפועל לא היה צריך להשתמש בזה פשוט רציתי להדגים, אם ניצור
+loop
+חדש, עם
+`asyncio.new_event_loop`
+אז נכון להשתמש בזה, אחרת זה כבר מטופל בפונקציה.
+
+כל זה לא מעט בשביל רק להריץ קוד אסינכרוני וגם חסרים שם חלקים נוספים כדי לטפל בעוד שגיאות אפשרויות.
+לכן קיימת הפונקציה
+`asyncio.run` -
+שאתם יכולים לראות מהקוד שלה, עושה בגדול את כל זה.
+
+מושג נוסף חשוב שנחבא בדוגמה לעיל הוא
+coroutine.
+למעשה פונקציה שאנחנו מגדירים
+עם
+`async`
+שונה מפונקציות רגילות.
+כאשר אנחנו "קוראים לה"
+`my_async_func()`
+היא לא מתחילה לרוץ, אלא מחזירה אוביקט
+coroutine.
+coroutine
+דומה מאד במימוש שלו
+לגנרטור (על זה דיברנו בחלק [הקודם](/posts/asyncio-101-part1)).
+כדי שהוא יתחיל לרוץ יש לנו כמה אפשרויות
+כשהדרך הכי בסיסית היא לקרוא לו עם
+`await`,
+כמו שראינו.
+אך זה גורם לפונקציה לחכות לו.
+אם לא נרצה לחכות, או לפני שנרצה לחכות לו נרצה לעשות כמה פעולות?
+
+### task
+
+ללקסיקון המושגים פה נוסיף מושג אחרון שהוא
+task.
+task
+הוא למעשה אובייקט שמתאר ריצה של
+coroutine,
+כלומר כאשר אנחנו רוצים להתחיל להריץ
+coroutine
+נהפוך אותו
+לtask.
+
+```python
+import asyncio
+
+
+async def print_hello(id: int) -> None:
+    for _ in range(5):
+        await asyncio.sleep(1)
+        print(f"Hello from {id=}")
+
+async def main():
+    # turn coroutine to task
+    task1 = asyncio.create_task(print_hello(1))
+    print("Task 1 created and running")
+    task2 = asyncio.create_task(print_hello(2))
+    print("Task 2 created and running")
+    # Wait for both tasks to complete
+    await task1
+    await task2
+    print("Both tasks completed")
+
+    # or in python 3.11+ using Task Groups
+    async with asyncio.TaskGroup() as tg:
+        tg.create_task(print_hello(3))
+        tg.create_task(print_hello(4))
+        print("Task group created and running")
+    # exiting the task group will wait for all tasks to complete
+    print("Task group completed")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+בדוגמה למעלה אנחנו רואים איך משתמשים
+ב`asyncio.create_task`
+כדי להפוך
+coroutine
+לtask,
+ומחכים לו שיסתיים, מרגע הקריאה
+ל`asyncio.create_task`
+הcoroutine
+מתחיל לרוץ.
+בנוסף בדוגמה רואים כי
+בגרסאות חדשות יותר טוב ניתן לראות כי אפשר להשתמש
+ב`asyncio.TaskGroup`
+אשר קצת מפשט את הקריאות.
+
+דרך אפילו עוד יותר פשוטה היא באמצעות
+`asyncio.gather,
+
+```python
+import asyncio
+
+async def print_hello(id: int) -> None:
+    for _ in range(5):
+        await asyncio.sleep(1)
+        print(f"Hello from {id=}")
+
+async def main():
+    await asyncio.gather(
+        print_hello(1),
+        print_hello(2)
+    )
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+קח ניתן להריץ ולחכות לשתי
+coroutineים
+במקביל.
+המימוש של זה יחסית מעניין, מאחורי הקלעים היא מייצרת
+future
+חדש ומוסיפה לכל אחד
+מהcoroutine
+פונקציית
+callback
+אשר מעלה מונה בכל פעם
+שcoroutine
+סיים לרוץ.
+רק כאשר כל
+הcoroutineים
+סיימו לרוץ
+הfututre
+החדש שנוצר מקבל ערך, בכך שאם מחכים
+לfuture
+החדש למעשה מחכים שכל
+הcoroutineים
+יסתיימו.
+הדרך שבה
+`asyncio.gather`
+מתחיל את הריצה של כל
+הcoroutineים
+הוא באמצעות יצירת
+task
+מכל אחד מהם.
+
+כל אלו מסכמים דיי את רוב הפעולות הבסיסיות שנרצה לעשות עם קוד אסינכרוני,
+אגע עכשיו בכמה מקרים מיוחדים.
+
+## מקרים מיוחדים
+
+### הגבלת כמות הcoroutineים
+
+לעיתים אנחנו רוצים להריץ באמצעות
+coroutineים
+הרבה מאד פעולות,
+לדוגמה יש לנו מערך של מאה אתרים שמהם אנחנו רוצים להוריד תוכן.
+כמובן שאפשר למקבל על המערך הזה באמצעות קוד אסינכרוני.
+אך לא נרצה גם שמאה
+coroutineים
+יתחרו על זמן ריצה אחד עם השני (שם בצד דלגציה
+לthread
+אחר).
+הדרך שבה ניתן להגביל את כמות
+הcoroutineים
+שרצים במקביל היא באמצעות שימוש
+ב`asyncio.Semaphore`.
+למעשה נעטוף כל
+coroutine
+בהמתנה
+לsemaphore
+לפי הכמות שאנחנו רוצים להגביל.
+
+```python
+import asyncio
+from collections.abc import Coroutine
+from typing import Any, TypeVar
+
+T = TypeVar('T')
+
+async def limit_gather(n: int, *coroutines: Coroutine[Any, Any, T]) -> list[T]:
+    semaphore = asyncio.Semaphore(n)
+
+    async def _limited_coroutine(coroutine: Coroutine[Any, Any, T]) -> T:
+        async with semaphore:
+            return await coroutine
+
+    return await asyncio.gather(
+        *(_limited_coroutine(coroutine) for coroutine in coroutines),
+    )
+```
+
+### הרצת קוד אסינכרוני בצורה סינכרונית ולהפך
+
+לפעמים יש לנו קוד אסינכרוני, שאנחנו רוצים להריץ תחת קוד סינכרוני.
+במבט ראשוני זה נראה טרוויאלי כי ראינו כבר קריאה לקוד אסינכרוני
+בין אם דרך
+loop
+או דרך
+`asyncio.run`.
+אך לפעמים אנחנו נמצאים בתוך קונטקסט יותר מורכב,
+אולי בתוך
+REPL
+או בתוך קוד של ספריה אחרת שאולי כבר מריצה
+ברקע איזה שהוא
+event loop.
+אז נרצה לייצר פונקציה שמתמודדת עם זה.
+
+```python
+import asyncio
+from collections.abc import Coroutine
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, TypeVar
+
+T = TypeVar('T')
+
+def run_coroutine_sync(coroutine: Coroutine[Any, Any, T]) -> T:
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # No current event loop running, let asyncio create and run the coroutine
+        return asyncio.run(coroutine)
+
+    # If the loop is running, offload to thread.
+    with ThreadPoolExecutor() as pool:
+        future = pool.submit(asyncio.run, coroutine)
+        return future.result()
+```
+
+הקוד מטפל בשני מקרים ומשתמש
+בAPI
+שאנחנו כבר מכירים.
+שתי נקודות שאני רוצה להדגיש.
+הראשונה,
+במקרה שבו יש לנו
+loop
+שרץ (השני) יכולנו אולי לחשוב שאפשר פשוט לייצר
+task
+שייכנס לריצה
+בloop
+ולחכות לו בצורה הבאה,
+
+```python
+# Create global duture
+sync_future = Future()
+
+# Create a callback that sets the future when task is done
+def transfer_result(task: asyncio.Task):
+    try:
+        sync_future.set_result(task.result())
+    except Exception as e:
+        sync_future.set_exception(e)
+
+# Call the task and add the future
+task = loop.create_task(coroutine)
+task.add_done_callback(transfer_result)
+
+# Wait on the future
+return sync_future.result()  # Block here until coroutine is done
+```
+
+אך יש פה נקודה עדינה, הקריאת
+`sync_future.result()`
+שבולקת גורמת לפונקציה לחכות.
+ומדובר בקוד סינכרוני אז אנחנו בולקים את כל
+הthread
+ולכן בשום שלב
+הtask
+שלנו לא יכול להתחיל לרוץ - כי הוא לא מקבל זמן ריצה מאף אחד, אנחנו בתוך קוד סינכרוני לא אסינכרוני. כלומר יצרנו
+deadlock,
+לכן היינו חייבים להעציל את המשימה
+לthread
+נפרד שיריץ ואז כאשר אנחנו נבלוק את
+הthread
+הנוכחי
+הקוד האסינכרוני יוכל לרוץ
+בthread
+החדש.
+
+אפשרות נוספת שיכלה להיות אך היא דורשת עוד הכנה מראש היא שימוש
+ב`asyncio.run_coroutine_threadsafe`.
+הפונקציה הזאת מקבלת
+coroutine
+וloop
+שנמצא
+בthread
+אחר, ומריצה את
+הcoroutine
+בloop
+של
+הthread
+הזה.
+כלומר במקרה שבו אין לנו
+event loop
+אולי יש אחד שרץ
+בthread
+אחר שאנחנו יכולים להשתמש בו במקום ליצור חדש.
+לדוגמה ניתן לייצר
+thread
+שאחראי על הרצת כל הקוד האסינכרוני שלנו ואליו תמיד נעביר הרצה של קוד אסינכרוני
+בזמן
+שthread
+אחר מטפל בבעיות אחרות.
+
+אפשרות שלישית שפחות ארחיב עליה היא להשתמש בספריה
+`nest_asyncio`
+שמאפשרת גם בתוך
+event loop
+רץ לקרוא
+ל`asyncio.run`.
+הלם. אני יודע. ואם לא הלם עבורך נסה לחשוב מה מיוחד בזה, למה שלא יהיה אפשר לקרוא לפונקציה
+`asyncio.run`
+פעמיים.
+
+מה עם המקרה ההפוך? נניח שיש לנו קוד סינכרוני שאנחנו רוצים להריץ
+בתוך קוד אסינכרוני. למעשה אנחנו כל הזמן עושים את זה.
+פשוט קוראים לפונקציה והיא רצה, לא איכפת לה שהיא בתוך קוד אסינכרוני.
+אך מה עם הפונקציה איטית מאד,
+או נגיד קוראת
+ל`sleep`
+באמצע שלה - היא למעשה תתקע את כל
+הthread
+ולא תאפשר לקוד אסינכרוני אחר לרוץ.
+במקרים כאלו נרצה גם להעציל את המשימה הזאת
+לthread
+אחר ובדיוק לזה יצרו את פונקציה הבאה לנוחות
+`asyncio.run_in_executor`
+אשר מקבלת פונקציה סינכרונית, מעצילה
+לthread
+אחר ומחזירה לנו
+Future
+שאנחנו יכולים לחכות עליו.
+
+### הרצת קוד אסינכרוני ברקע
+
+קיימים מקרים בהם נרצה לקחת קוד אסינכרוני ולהריץ אותו ברקע מבלי לחכות לו.
+בדומה לקוד סינכרוני ששם ברור שנצטרך לקרוא
+לthread
+חדש. גם בקוד אסינכרוני ניתן לעשות זאת
+עם תוספת קטנה, שאם יש לנו
+event loop
+רץ ניתן לנצל אותו.
+
+```python
+def run_coroutine_in_background(coroutine: Coroutine[Any, Any, Any]) -> None:
+    try:
+        loop = asyncio.get_running_loop()
+        # We're inside an event loop, add a task to the loop
+        loop.create_task(coroutine)
+    except RuntimeError:
+        # No running loop, offload to a thread
+        thread = threading.Thread(target=asyncio.run, args=(coroutine,))
+        thread.daemon = True
+        thread.start()
+```
+
+בדוגמה אנחנו בודקים אם אנחנו בתוך
+event loop
+אם כן ניתן להוסיף
+task
+לloop
+שירוץ ברקע מבלי לחכות לו.
+אחרת נעביר את המשימה
+לthread
+חדש כדי לא לבלוק את
+הthread
+המרכזי שלנו.
+שימו לב שהקוד מניח שיש עוד לוגיקה שרצה לאחר הקריאה לפונקציה הזאת אחרת התוכנית עלולה לסיים ללא סיום של הפונקציה.
+
+## סיכום
+
+לא יצא לי לכתוב פוסטים "לימודיים" בבלוג הזה וגם זה היה לי דיי מוזר.
+בעיקר אני אוהב לכתוב על דברים שאני עושה ומה שלמדתי בדרך,
+אבל בשני פוסטים האחרונים פשוט למדתי על
+הinternals
+של
+`asyncio`
+והדרך הטובה ביותר לעשות את זה היה לנסות להסביר מה כל דבר שם עושה.
+לא נראה לי אעשה פוסטים דומים בהמשך אבל מקווה שלמדתם משהו.
+בפוסט הזה צללנו לעבודה האסינכרונית
+בPython
+עם
+`asyncio`.
+עברנו על המושגים החשובים כמו
+future, loop, coroutine, ו־task,
+ולמדנו איך הם משתלבים יחד כדי לאפשר כתיבה של קוד אסינכרוני שיחסית קל לניהול.
+ראינו איך להריץ
+coroutineים
+בצורה מבוקרת, איך להתנהל במצבים של קוד סינכרוני ואסינכרוני שמתערבבים יחד.
+
+בעולם האמיתי תיתקלו בעוד אתגרים כמו טיפול בשגיאות מפונקציות אסינכרוניות,
+ביטול משימות ,ותיאום בין
+coroutineים.
+כל אלו מעולים ללמוד אם זה מעניין אותכם.
+כדי באמת להבין ממליץ גם לבנות
+echo server
+בעצמכם כדי להיתקל בבעיות ולקרוא גם על
+`trio`
+שהיא ספריה שמנסה לכתוב בצורה פשוטה יותר ופחות מקום לשגיאות את הניהול של קוד אסינכרוני.
