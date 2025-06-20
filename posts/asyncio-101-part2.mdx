@@ -48,13 +48,13 @@ Future
 ```python
 from concurrent.futures import Future
 
-def read_message(future_result: Future[str]) -> None:
-    message = _read(...)
+def receive_message(future_result: Future[str]) -> None:
+    message = some_receive_impl(...)  # psuedo-code: get message from elsewhere
     future_result.set_result(message)
 
 def main():
     future_result = Future[str]()
-    read_message(future_result)
+    receive_message(future_result)
     result = future_result.result() # blocks and waits for result
     print(result)
 ```
@@ -102,11 +102,11 @@ with ThreadPoolExecutor(max_workers=2) as executor:
     print(f"Elapsed time: {time.perf_counter() - start:.2f} seconds")
 ```
 
-אנחנו מעצילים משימות
+אנחנו מאצילים משימות
 ל`ThreadPoolExecutor`
 והוא מחזיר לנו
 futures
-עבור כל פעולה שהעצלנו אליו.
+עבור כל פעולה שהאצלנו אליו.
 באמצעות
 threadים
 ביצענו כמה פעולות במקביל
@@ -122,7 +122,7 @@ threadים
 future
 ניתן להוסיף
 callback
-שיקרא ברגע
+שירוץ ברגע
 שהfuture
 מקבל ערך,
 באמצעות המתודה
@@ -209,7 +209,7 @@ loop
 מתבצע על ידי הוספת
 callback.
 הcallback
-נקרא כאשר
+רץ כאשר
 הfuture
 סיים את הריצה שלו ומה שהוא עושה הוא לזרוק שגיאה.
 לשגיאה
@@ -354,7 +354,7 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-קח ניתן להריץ ולחכות לשתי
+כך ניתן להריץ ולחכות לשתי
 coroutineים
 במקביל.
 המימוש של זה יחסית מעניין, מאחורי הקלעים היא מייצרת
@@ -507,7 +507,7 @@ return sync_future.result()  # Block here until coroutine is done
 הtask
 שלנו לא יכול להתחיל לרוץ - כי הוא לא מקבל זמן ריצה מאף אחד, אנחנו בתוך קוד סינכרוני לא אסינכרוני. כלומר יצרנו
 deadlock,
-לכן היינו חייבים להעציל את המשימה
+לכן היינו חייבים להאציל את המשימה
 לthread
 נפרד שיריץ ואז כאשר אנחנו נבלוק את
 הthread
@@ -560,11 +560,11 @@ event loop
 באמצע שלה - היא למעשה תתקע את כל
 הthread
 ולא תאפשר לקוד אסינכרוני אחר לרוץ.
-במקרים כאלו נרצה גם להעציל את המשימה הזאת
+במקרים כאלו נרצה גם להאציל את המשימה הזאת
 לthread
 אחר ובדיוק לזה יצרו את פונקציה הבאה לנוחות
 `asyncio.run_in_executor`
-אשר מקבלת פונקציה סינכרונית, מעצילה
+אשר מקבלת פונקציה סינכרונית, מאצילה
 לthread
 אחר ומחזירה לנו
 Future
