@@ -12,6 +12,7 @@ import { ReactNode } from "react";
 import rehypeHighlight from "rehype-highlight";
 import emoji from "remark-emoji";
 import remarkGfm from "remark-gfm";
+import LinearChart from "../../components/LinearChart";
 import { PostMeta } from "../../types";
 import { postFilePaths, POSTS_PATH } from "../../utils/mdxUtils";
 import { useCopyClipboard } from "../../utils/useCopyClipboard";
@@ -93,6 +94,7 @@ const components = {
   ),
   ol: (props: any) => <ol className="list-decimal" {...props} />,
   ul: (props: any) => <ol className="list-disc" {...props} />,
+  LinearChart,
 };
 const SinglePostPage: React.FC<{
   source: MDXRemoteSerializeResult;
