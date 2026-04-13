@@ -92,8 +92,21 @@ const components = {
       {...props}
     />
   ),
-  ol: (props: any) => <ol className="list-decimal" {...props} />,
-  ul: (props: any) => <ol className="list-disc" {...props} />,
+  ol: (props: any) => <ol className="list-decimal mb-4" {...props} />,
+  ul: (props: any) => <ol className="list-disc mb-4" {...props} />,
+  table: (props: any) => (
+    <div className="overflow-x-auto mb-4">
+      <table className="w-full border-collapse text-sm" {...props} />
+    </div>
+  ),
+  thead: (props: any) => <thead className="bg-gray-800" {...props} />,
+  th: (props: any) => (
+    <th className="border border-gray-600 p-3 text-right font-bold" {...props} />
+  ),
+  td: (props: any) => (
+    <td className="border border-gray-600 p-3 text-right" {...props} />
+  ),
+  tr: (props: any) => <tr className="even:bg-gray-700" {...props} />,
   LinearChart,
 };
 const SinglePostPage: React.FC<{
@@ -112,7 +125,7 @@ const SinglePostPage: React.FC<{
       </Head>
       <div>
         <img
-          className="w-full opacity-40 max-h-[30vh] xl:max-h-[40vh]"
+          className="w-full opacity-40 max-h-[30vh] xl:max-h-[40vh] object-cover"
           src={frontMatter.image}
         />
         <h1 className="text-center mt-12 text-5xl font-bold tracking-wider sm:text-6xl">
